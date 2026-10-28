@@ -1,23 +1,22 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class NotificationItem
 {
-    [DataMember(Name = "notificationId", EmitDefaultValue = false)]
+    [JsonPropertyName("notificationId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Id { get; set; }
 
-    [DataMember(Name = "eventType", EmitDefaultValue = false)]
+    [JsonPropertyName("eventType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? EventType { get; set; }
 
-    [DataMember(Name = "eventDate", EmitDefaultValue = false)]
+    [JsonPropertyName("eventDate"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? EventDate { get; set; }
 
-    [DataMember(Name = "webhookId", EmitDefaultValue = false)]
+    [JsonPropertyName("webhookId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? WebhookId { get; set; }
 
-    [DataMember(Name = "payload", EmitDefaultValue = false)]
+    [JsonPropertyName("payload"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public NotificationPayload? Payload { get; set; }
 
     public NotificationEventType? GetEventType() => EventType switch
@@ -28,6 +27,9 @@ internal sealed class NotificationItem
         "net.authorize.payment.priorAuthCapture.created" => NotificationEventType.PriorAuthCaptureCreated,
         "net.authorize.payment.refund.created" => NotificationEventType.RefundCreated,
         "net.authorize.payment.void.created" => NotificationEventType.VoidCreated,
+        "net.authorize.payment.fraud.approved" => NotificationEventType.FraudApproved,
+        "net.authorize.payment.fraud.declined" => NotificationEventType.FraudDeclined,
+        "net.authorize.payment.fraud.held" => NotificationEventType.FraudHeld,
         _ => null
     };
 }

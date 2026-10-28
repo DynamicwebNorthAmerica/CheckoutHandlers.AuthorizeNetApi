@@ -1,15 +1,16 @@
-using Dynamicweb.Ecommerce.Prices;
+using System;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
 
 /// <summary>
-/// Helper class for adjusting amounts according to Authorize.Net API requirements
+/// Amount handling for the Authorize.Net API, which accepts up to four decimals.
 /// </summary>
 internal static class AmountHelper
 {
+    private const int ApiDecimals = 4;
+
     /// <summary>
-    /// Adjusts amount to comply with Authorize.Net API requirements and avoid potential issues with floating point precision.
+    /// Rounds an amount to the four decimals the API accepts, removing floating point noise.
     /// </summary>
-    /// <param name="amount">Amount to adjust</param>
-    public static double AdjustAmount(double amount) => PriceHelper.Round(4, amount);
+    public static double AdjustAmount(double amount) => Math.Round(amount, ApiDecimals, MidpointRounding.AwayFromZero);
 }

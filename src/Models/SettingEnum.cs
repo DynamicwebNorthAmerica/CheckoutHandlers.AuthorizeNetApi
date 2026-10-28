@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
 [JsonConverter(typeof(DataContractEnumConverter<SettingEnum>))]
-[DataContract]
 internal enum SettingEnum
 {
     [EnumMember(Value = "emailCustomer")]

@@ -1,16 +1,15 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class EmvTag
 {
-    [DataMember(Name = "name", EmitDefaultValue = false)]
+    [JsonPropertyName("name"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Name { get; set; }
 
-    [DataMember(Name = "value", EmitDefaultValue = false)]
+    [JsonPropertyName("value"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Value { get; set; }
 
-    [DataMember(Name = "formatted", EmitDefaultValue = false)]
+    [JsonPropertyName("formatted"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Formatted { get; set; }
 }

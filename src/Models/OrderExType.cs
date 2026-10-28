@@ -1,13 +1,12 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class OrderExType
 {
-    [DataMember(Name = "invoiceNumber", EmitDefaultValue = false)]
+    [JsonPropertyName("invoiceNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? InvoiceNumber { get; set; }
 
-    [DataMember(Name = "purchaseOrderNumber", EmitDefaultValue = false)]
+    [JsonPropertyName("purchaseOrderNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? PurchaseOrderNumber { get; set; }
 }

@@ -1,19 +1,18 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class TokenMaskedType
 {
-    [DataMember(Name = "tokenSource")]
+    [JsonPropertyName("tokenSource")]
     public string TokenSource { get; set; } = "";
 
-    [DataMember(Name = "tokenNumber")]
+    [JsonPropertyName("tokenNumber")]
     public string TokenNumber { get; set; } = "";
 
-    [DataMember(Name = "expirationDate")]
+    [JsonPropertyName("expirationDate")]
     public string ExpirationDate { get; set; } = "";
 
-    [DataMember(Name = "tokenRequestorId")]
+    [JsonPropertyName("tokenRequestorId")]
     public string TokenRequestorId { get; set; } = "";
 }

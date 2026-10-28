@@ -1,24 +1,38 @@
 using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Constants;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
 
 /// <summary>
-/// Security helper for protecting sensitive data
+/// Masks secrets and card data before anything is written to a log.
 /// </summary>
-internal static class SecurityHelper
+internal static partial class SecurityHelper
 {
+    [GeneratedRegex(@"(cardNumber[""']?[:\s=]+[""']?)(\d{13,19})([""']?)", RegexOptions.IgnoreCase)]
+    private static partial Regex CardNumberPattern();
+
+    [GeneratedRegex(@"(cardCode[""']?[:\s=]+[""']?)(\d{3,4})([""']?)", RegexOptions.IgnoreCase)]
+    private static partial Regex CardCodePattern();
+
+    [GeneratedRegex(@"(transactionKey[""']?[:\s=]+[""']?)([^""'\s,}]+)([""']?)", RegexOptions.IgnoreCase)]
+    private static partial Regex TransactionKeyPattern();
+
+    [GeneratedRegex(@"(password[""']?[:\s=]+[""']?)([^""'\s,}]+)([""']?)", RegexOptions.IgnoreCase)]
+    private static partial Regex PasswordPattern();
+
+    [GeneratedRegex(@"(authorization[""']?\s*[:=]\s*)(basic|bearer)(\s+)(\S+)", RegexOptions.IgnoreCase)]
+    private static partial Regex AuthorizationHeaderPattern();
+
     /// <summary>
-    /// Masks credit card number for logging
+    /// Masks a card number for logging, keeping only the last four digits.
     /// </summary>
     public static string MaskCreditCardNumber(string? cardNumber)
     {
         if (string.IsNullOrEmpty(cardNumber))
             return "";
 
-        var cleaned = Regex.Replace(cardNumber, @"[\s\-]", "");
+        string cleaned = cardNumber.Replace(" ", "").Replace("-", "");
 
         if (cleaned.Length < 4)
             return new string('X', cleaned.Length);
@@ -26,70 +40,44 @@ internal static class SecurityHelper
         if (cleaned.Length <= 8)
             return new string('X', cleaned.Length - 4) + cleaned[^4..];
 
-        // Show only last 4 digits (PCI DSS compliance)
         return SecuritySettings.CardNumberMask + cleaned[^4..];
     }
 
     /// <summary>
-    /// Masks API keys for logging
+    /// Masks sensitive values in request/response text before logging:
+    /// card numbers, card codes, transaction keys, passwords and HTTP Authorization credentials.
     /// </summary>
-    public static string MaskApiKey(string? apiKey)
-    {
-        if (string.IsNullOrEmpty(apiKey))
-            return "";
-
-        if (apiKey.Length <= 4)
-            return SecuritySettings.ApiKeyMask;
-
-        // Show first 2 and last 2 characters
-        return apiKey[..2] + SecuritySettings.ApiKeyMask + apiKey[^2..];
-    }
-
-    /// <summary>
-    /// Masks sensitive data in JSON for logging
-    /// Only masks financially critical data: card numbers, CVV codes, and API keys
-    /// </summary>
-    public static string MaskSensitiveDataInContent(string content)
+    public static string MaskSensitiveDataInContent(string? content)
     {
         if (string.IsNullOrEmpty(content))
             return "";
 
-        var masked = content;
+        string masked = content;
 
-        // Mask card numbers (JSON format)
-        masked = Regex.Replace(masked, @"(cardNumber[""']?[:\s=]+[""']?)(\d{13,19})([""']?)",
-            match => match.Groups[1].Value + MaskCreditCardNumber(match.Groups[2].Value) + match.Groups[3].Value,
-            RegexOptions.IgnoreCase);
+        masked = CardNumberPattern().Replace(masked,
+            match => match.Groups[1].Value + MaskCreditCardNumber(match.Groups[2].Value) + match.Groups[3].Value);
 
-        // Mask CVV/CVC codes (JSON format)
-        masked = Regex.Replace(masked, @"(cardCode[""']?[:\s=]+[""']?)(\d{3,4})([""']?)",
-            match => match.Groups[1].Value + "XXX" + match.Groups[3].Value,
-            RegexOptions.IgnoreCase);
+        masked = CardCodePattern().Replace(masked,
+            match => match.Groups[1].Value + "XXX" + match.Groups[3].Value);
 
-        // Mask API transaction keys
-        masked = Regex.Replace(masked, @"(transactionKey[""']?[:\s=]+[""']?)([A-Za-z0-9]+)([""']?)",
-            match => match.Groups[1].Value + MaskApiKey(match.Groups[2].Value) + match.Groups[3].Value,
-            RegexOptions.IgnoreCase);
+        masked = TransactionKeyPattern().Replace(masked,
+            match => match.Groups[1].Value + SecuritySettings.SecretMask + match.Groups[3].Value);
 
-        // Mask passwords
-        masked = Regex.Replace(masked, @"(password[""']?[:\s=]+[""']?)([^""'\s]+)([""']?)",
-            match => match.Groups[1].Value + "***HIDDEN***" + match.Groups[3].Value,
-            RegexOptions.IgnoreCase);
+        masked = PasswordPattern().Replace(masked,
+            match => match.Groups[1].Value + SecuritySettings.SecretMask + match.Groups[3].Value);
+
+        masked = AuthorizationHeaderPattern().Replace(masked,
+            match => match.Groups[1].Value + match.Groups[2].Value + match.Groups[3].Value + SecuritySettings.SecretMask);
 
         return masked;
     }
 
     /// <summary>
-    /// Validates security configuration settings
+    /// Validates that the credentials needed to talk to Authorize.Net and to verify webhooks are configured.
     /// </summary>
-    public static SecurityValidationResult ValidateSecurityConfiguration(
-        string apiLoginId,
-        string transactionKey,
-        string signatureKey,
-        bool isTestMode)
+    public static SecurityValidationResult ValidateSecurityConfiguration(string? apiLoginId, string? transactionKey, string? signatureKey)
     {
         var issues = new List<string>();
-        var warnings = new List<string>();
 
         if (string.IsNullOrWhiteSpace(apiLoginId))
             issues.Add("API Login ID is required");
@@ -102,9 +90,8 @@ internal static class SecurityHelper
 
         return new SecurityValidationResult
         {
-            IsValid = !issues.Any(),
-            SecurityIssues = issues,
-            SecurityWarnings = warnings
+            IsValid = issues.Count == 0,
+            SecurityIssues = issues
         };
     }
 }

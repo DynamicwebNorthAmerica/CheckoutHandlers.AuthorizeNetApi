@@ -1,13 +1,12 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CreditCardSimpleType
 {
-    [DataMember(Name = "cardNumber")]
+    [JsonPropertyName("cardNumber")]
     public string CardNumber { get; set; } = "";
 
-    [DataMember(Name = "expirationDate")]
+    [JsonPropertyName("expirationDate")]
     public string ExpirationDate { get; set; } = "";
 }

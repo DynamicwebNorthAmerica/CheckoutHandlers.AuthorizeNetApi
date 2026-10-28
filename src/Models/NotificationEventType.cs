@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
 [JsonConverter(typeof(DataContractEnumConverter<NotificationEventType>))]
-[DataContract]
 internal enum NotificationEventType
 {
     /// <summary>
@@ -42,5 +41,23 @@ internal enum NotificationEventType
     /// Notifies you that an unsettled transaction was voided.
     /// </summary>
     [EnumMember(Value = "VoidCreated")]
-    VoidCreated
+    VoidCreated,
+
+    /// <summary>
+    /// Notifies you that a transaction held for review was approved by the merchant.
+    /// </summary>
+    [EnumMember(Value = "FraudApproved")]
+    FraudApproved,
+
+    /// <summary>
+    /// Notifies you that a transaction held for review was declined by the merchant.
+    /// </summary>
+    [EnumMember(Value = "FraudDeclined")]
+    FraudDeclined,
+
+    /// <summary>
+    /// Notifies you that a transaction was held for review by the fraud filters.
+    /// </summary>
+    [EnumMember(Value = "FraudHeld")]
+    FraudHeld
 }

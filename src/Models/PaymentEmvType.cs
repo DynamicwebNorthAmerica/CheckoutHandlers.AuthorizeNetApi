@@ -1,16 +1,15 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class PaymentEmvType
 {
-    [DataMember(Name = "emvData", EmitDefaultValue = false)]
+    [JsonPropertyName("emvData"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? EmvData { get; set; }
 
-    [DataMember(Name = "emvDescriptor", EmitDefaultValue = false)]
+    [JsonPropertyName("emvDescriptor"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? EmvDescriptor { get; set; }
 
-    [DataMember(Name = "emvVersion", EmitDefaultValue = false)]
+    [JsonPropertyName("emvVersion"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? EmvVersion { get; set; }
 }

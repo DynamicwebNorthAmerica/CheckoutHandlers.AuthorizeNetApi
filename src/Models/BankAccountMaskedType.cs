@@ -1,25 +1,24 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class BankAccountMaskedType
 {
-    [DataMember(Name = "accountType", EmitDefaultValue = false)]
+    [JsonPropertyName("accountType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public BankAccountTypeEnum? AccountType { get; set; }
 
-    [DataMember(Name = "echeckType", EmitDefaultValue = false)]
+    [JsonPropertyName("echeckType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public EcheckTypeEnum? EcheckType { get; set; }
 
-    [DataMember(Name = "routingNumber", EmitDefaultValue = false)]
+    [JsonPropertyName("routingNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? RoutingNumber { get; set; }
 
-    [DataMember(Name = "accountNumber", EmitDefaultValue = false)]
+    [JsonPropertyName("accountNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AccountNumber { get; set; }
 
-    [DataMember(Name = "nameOnAccount", EmitDefaultValue = false)]
+    [JsonPropertyName("nameOnAccount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? NameOnAccount { get; set; }
 
-    [DataMember(Name = "bankName", EmitDefaultValue = false)]
+    [JsonPropertyName("bankName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? BankName { get; set; }
 }

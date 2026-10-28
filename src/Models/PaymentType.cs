@@ -1,34 +1,33 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class PaymentType
 {
-    [DataMember(Name = "creditCard", EmitDefaultValue = false)]
+    [JsonPropertyName("creditCard"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CreditCardType? CreditCard { get; set; }
 
-    [DataMember(Name = "trackData", EmitDefaultValue = false)]
+    [JsonPropertyName("trackData"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? TrackData { get; set; }
 
-    [DataMember(Name = "encryptedTrackData", EmitDefaultValue = false)]
+    [JsonPropertyName("encryptedTrackData"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? EncryptedTrackData { get; set; }
 
-    [DataMember(Name = "payPal", EmitDefaultValue = false)]
+    [JsonPropertyName("payPal"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public PayPalType? PayPal { get; set; }
 
-    [DataMember(Name = "emv", EmitDefaultValue = false)]
+    [JsonPropertyName("emv"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public PaymentEmvType? Emv { get; set; }
 
-    [DataMember(Name = "dataSource", EmitDefaultValue = false)]
+    [JsonPropertyName("dataSource"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DataSource { get; set; }
 
-    [DataMember(Name = "paymentMaskedType", EmitDefaultValue = false)]
+    [JsonPropertyName("paymentMaskedType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public PaymentMaskedType? PaymentMaskedType { get; set; }
 
-    [DataMember(Name = "tokenMaskedType", EmitDefaultValue = false)]
+    [JsonPropertyName("tokenMaskedType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TokenMaskedType? TokenMaskedType { get; set; }
 
-    [DataMember(Name = "tokenRequestorId", EmitDefaultValue = false)]
+    [JsonPropertyName("tokenRequestorId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? TokenRequestorId { get; set; }
 }

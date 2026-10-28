@@ -1,10 +1,9 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CustomerProfileBaseType
 {
-    [DataMember(Name = "merchantCustomerId")]
+    [JsonPropertyName("merchantCustomerId")]
     public string MerchantCustomerId { get; set; } = "";
 }

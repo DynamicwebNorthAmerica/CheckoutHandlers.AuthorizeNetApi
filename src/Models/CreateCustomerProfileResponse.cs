@@ -1,17 +1,16 @@
 ﻿using System.Collections.Generic;
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CreateCustomerProfileResponse
 {
-    [DataMember(Name = "messages", EmitDefaultValue = false)]
+    [JsonPropertyName("messages"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public MessagesType? Messages { get; set; }
 
-    [DataMember(Name = "customerProfileId")]
+    [JsonPropertyName("customerProfileId")]
     public string CustomerProfileId { get; set; } = "";
 
-    [DataMember(Name = "customerPaymentProfileIdList", EmitDefaultValue = false)]
+    [JsonPropertyName("customerPaymentProfileIdList"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IEnumerable<string>? CustomerPaymentProfileIdList { get; set; }
 }

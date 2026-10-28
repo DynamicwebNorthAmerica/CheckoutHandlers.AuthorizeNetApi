@@ -1,13 +1,12 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class ProcessingOptionsType
 {
-    [DataMember(Name = "isSubsequentAuth", EmitDefaultValue = false)]
+    [JsonPropertyName("isSubsequentAuth"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsSubsequentAuth { get; set; }
 
-    [DataMember(Name = "isStoredCredentials", EmitDefaultValue = false)]
+    [JsonPropertyName("isStoredCredentials"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsStoredCredentials { get; set; }
 }

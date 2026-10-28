@@ -1,70 +1,69 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class BatchStatisticType
 {
-    [DataMember(Name = "accountType", EmitDefaultValue = false)]
+    [JsonPropertyName("accountType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public AccountTypeEnum? AccountType { get; set; }
 
-    [DataMember(Name = "chargeAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("chargeAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double ChargeAmount { get; set; }
 
-    [DataMember(Name = "chargeCount", EmitDefaultValue = false)]
+    [JsonPropertyName("chargeCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ChargeCount { get; set; }
 
-    [DataMember(Name = "refundAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("refundAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double RefundAmount { get; set; }
 
-    [DataMember(Name = "refundCount", EmitDefaultValue = false)]
+    [JsonPropertyName("refundCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int RefundCount { get; set; }
 
-    [DataMember(Name = "voidCount", EmitDefaultValue = false)]
+    [JsonPropertyName("voidCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int VoidCount { get; set; }
 
-    [DataMember(Name = "declineCount", EmitDefaultValue = false)]
+    [JsonPropertyName("declineCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int DeclineCount { get; set; }
 
-    [DataMember(Name = "errorCount", EmitDefaultValue = false)]
+    [JsonPropertyName("errorCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ErrorCount { get; set; }
 
-    [DataMember(Name = "returnedItemAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("returnedItemAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double ReturnedItemAmount { get; set; }
 
-    [DataMember(Name = "returnedItemCount", EmitDefaultValue = false)]
+    [JsonPropertyName("returnedItemCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ReturnedItemCount { get; set; }
 
-    [DataMember(Name = "chargebackAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("chargebackAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double ChargebackAmount { get; set; }
 
-    [DataMember(Name = "chargebackCount", EmitDefaultValue = false)]
+    [JsonPropertyName("chargebackCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ChargebackCount { get; set; }
 
-    [DataMember(Name = "correctionNoticeCount", EmitDefaultValue = false)]
+    [JsonPropertyName("correctionNoticeCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int CorrectionNoticeCount { get; set; }
 
-    [DataMember(Name = "chargeChargeBackAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("chargeChargeBackAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double ChargeChargeBackAmount { get; set; }
 
-    [DataMember(Name = "chargeChargeBackCount", EmitDefaultValue = false)]
+    [JsonPropertyName("chargeChargeBackCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ChargeChargeBackCount { get; set; }
 
-    [DataMember(Name = "refundChargeBackAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("refundChargeBackAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double RefundChargeBackAmount { get; set; }
 
-    [DataMember(Name = "refundChargeBackCount", EmitDefaultValue = false)]
+    [JsonPropertyName("refundChargeBackCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int RefundChargeBackCount { get; set; }
 
-    [DataMember(Name = "chargeReturnedItemsAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("chargeReturnedItemsAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double ChargeReturnedItemsAmount { get; set; }
 
-    [DataMember(Name = "chargeReturnedItemsCount", EmitDefaultValue = false)]
+    [JsonPropertyName("chargeReturnedItemsCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ChargeReturnedItemsCount { get; set; }
 
-    [DataMember(Name = "refundReturnedItemsAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("refundReturnedItemsAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double RefundReturnedItemsAmount { get; set; }
 
-    [DataMember(Name = "refundReturnedItemsCount", EmitDefaultValue = false)]
+    [JsonPropertyName("refundReturnedItemsCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int RefundReturnedItemsCount { get; set; }
 }

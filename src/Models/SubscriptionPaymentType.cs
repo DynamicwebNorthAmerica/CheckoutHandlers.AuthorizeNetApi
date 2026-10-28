@@ -1,13 +1,12 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class SubscriptionPaymentType
 {
-    [DataMember(Name = "id", EmitDefaultValue = false)]
+    [JsonPropertyName("id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Id { get; set; }
 
-    [DataMember(Name = "payNum", EmitDefaultValue = false)]
+    [JsonPropertyName("payNum"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int PayNum { get; set; }
 }

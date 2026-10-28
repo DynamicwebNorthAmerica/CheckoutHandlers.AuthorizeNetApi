@@ -1,46 +1,45 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
 /// <summary>
 /// Represents a webhook response from Authorize.Net Webhooks API
 /// </summary>
-[DataContract]
 internal sealed class WebhookResponse
 {
     /// <summary>
     /// Unique identifier for the webhook
     /// </summary>
-    [DataMember(Name = "webhookId", EmitDefaultValue = false)]
+    [JsonPropertyName("webhookId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? WebhookId { get; set; }
 
     /// <summary>
     /// Name of the webhook
     /// </summary>
-    [DataMember(Name = "name", EmitDefaultValue = false)]
+    [JsonPropertyName("name"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Name { get; set; }
 
     /// <summary>
     /// Array of event types the webhook is subscribed to
     /// </summary>
-    [DataMember(Name = "eventTypes", EmitDefaultValue = false)]
+    [JsonPropertyName("eventTypes"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string[]? EventTypes { get; set; }
 
     /// <summary>
     /// Current status of the webhook
     /// </summary>
-    [DataMember(Name = "status", EmitDefaultValue = false)]
+    [JsonPropertyName("status"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Status { get; set; } = "active";
 
     /// <summary>
     /// URL where webhook notifications are sent
     /// </summary>
-    [DataMember(Name = "url", EmitDefaultValue = false)]
+    [JsonPropertyName("url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Url { get; set; }
 
     /// <summary>
     /// Links section from response
     /// </summary>
-    [DataMember(Name = "_links", EmitDefaultValue = false)]
+    [JsonPropertyName("_links"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public WebhookLinks? Links { get; set; }
 }

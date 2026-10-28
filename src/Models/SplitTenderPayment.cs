@@ -1,34 +1,33 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class SplitTenderPayment
 {
-    [DataMember(Name = "transId")]
+    [JsonPropertyName("transId")]
     public string TransId { get; set; } = "";
 
-    [DataMember(Name = "responseCode", EmitDefaultValue = false)]
+    [JsonPropertyName("responseCode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? ResponseCode { get; set; }
 
-    [DataMember(Name = "responseToCustomer", EmitDefaultValue = false)]
+    [JsonPropertyName("responseToCustomer"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? ResponseToCustomer { get; set; }
 
-    [DataMember(Name = "authCode", EmitDefaultValue = false)]
+    [JsonPropertyName("authCode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AuthCode { get; set; }
 
-    [DataMember(Name = "accountNumber", EmitDefaultValue = false)]
+    [JsonPropertyName("accountNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AccountNumber { get; set; }
 
-    [DataMember(Name = "accountType", EmitDefaultValue = false)]
+    [JsonPropertyName("accountType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AccountType { get; set; }
 
-    [DataMember(Name = "requestedAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("requestedAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? RequestedAmount { get; set; }
 
-    [DataMember(Name = "approvedAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("approvedAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? ApprovedAmount { get; set; }
 
-    [DataMember(Name = "balanceOnCard", EmitDefaultValue = false)]
+    [JsonPropertyName("balanceOnCard"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? BalanceOnCard { get; set; }
 }

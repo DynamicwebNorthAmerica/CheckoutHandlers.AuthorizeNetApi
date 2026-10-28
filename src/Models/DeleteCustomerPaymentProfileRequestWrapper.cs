@@ -1,10 +1,9 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class DeleteCustomerPaymentProfileRequestWrapper
 {
-    [DataMember(Name = "deleteCustomerPaymentProfileRequest", EmitDefaultValue = false)]
+    [JsonPropertyName("deleteCustomerPaymentProfileRequest"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public DeleteCustomerPaymentProfileRequest? DeleteCustomerPaymentProfileRequest { get; set; }
 }

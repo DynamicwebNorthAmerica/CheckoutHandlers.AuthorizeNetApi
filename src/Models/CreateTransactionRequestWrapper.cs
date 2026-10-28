@@ -1,10 +1,9 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CreateTransactionRequestWrapper
 {
-    [DataMember(Name = "createTransactionRequest")]
+    [JsonPropertyName("createTransactionRequest")]
     public CreateTransactionRequest CreateTransactionRequest { get; set; } = new();
 }

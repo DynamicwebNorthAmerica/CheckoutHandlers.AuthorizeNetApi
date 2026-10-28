@@ -6,10 +6,21 @@ using System.Linq;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
 
+/// <summary>
+/// Builds Authorize.Net request fragments from a Dynamicweb order.
+/// Field lengths follow the Authorize.Net API reference.
+/// </summary>
 internal static class AuthorizeNetModelFactory
 {
     private const string FallbackCustomerFirstName = "Customer";
     private const string FallbackCustomerLastName = "Name";
+
+    /// <summary>
+    /// Maximum length of lineItem.itemId and lineItem.name.
+    /// </summary>
+    internal const int LineItemIdMaxLength = 31;
+    internal const int LineItemNameMaxLength = 31;
+    internal const int LineItemDescriptionMaxLength = 255;
 
     public static NameAndAddressType CreateShipAddress(Order order)
     {
@@ -31,7 +42,7 @@ internal static class AuthorizeNetModelFactory
         {
             FirstName = StringHelper.Crop(firstName, 50),
             LastName = StringHelper.Crop(lastName, 50),
-            Company = StringHelper.Crop(order.DeliveryCompany ?? order.CustomerCompany, 50),
+            Company = StringHelper.Crop(FirstNonEmpty(order.DeliveryCompany, order.CustomerCompany), 50),
             Address = StringHelper.Crop(order.DeliveryAddress, 60),
             City = StringHelper.Crop(order.DeliveryCity, 40),
             State = StringHelper.Crop(order.DeliveryRegion, 40),
@@ -67,23 +78,29 @@ internal static class AuthorizeNetModelFactory
         };
     }
 
+    /// <summary>
+    /// Maps product and fixed order lines to Authorize.Net line items.
+    /// Unit price is the per-unit price (OrderLine.Price is the line total, quantity * unit price).
+    /// </summary>
     public static LineItems CreateLineItems(Order order)
     {
         var result = new List<LineItem>();
 
         foreach (OrderLine line in order.OrderLines)
         {
-            if (line.OrderLineType is OrderLineType.Product or OrderLineType.Fixed)
+            if (line.OrderLineType is not (OrderLineType.Product or OrderLineType.Fixed))
+                continue;
+
+            string name = FirstNonEmpty(line.ProductName, line.Product?.Name, line.ProductNumber, line.Id);
+
+            result.Add(new()
             {
-                result.Add(new()
-                {
-                    ItemId = line.Id,
-                    Name = StringHelper.Crop(line.Product.Name, 31),
-                    Description = StringHelper.Crop(line.Product.ShortDescription, 255),
-                    Quantity = Converter.ToDouble(line.Quantity),
-                    UnitPrice = Ecommerce.Services.Currencies.Round(order.Currency, line.Price.Price),
-                });
-            }
+                ItemId = StringHelper.Crop(FirstNonEmpty(line.ProductNumber, line.Id), LineItemIdMaxLength),
+                Name = StringHelper.Crop(name, LineItemNameMaxLength),
+                Description = StringHelper.Crop(line.Product?.ShortDescription, LineItemDescriptionMaxLength),
+                Quantity = Converter.ToDouble(line.Quantity),
+                UnitPrice = Ecommerce.Services.Currencies.Round(order.Currency, line.UnitPrice.Price),
+            });
         }
 
         return new()
@@ -92,28 +109,24 @@ internal static class AuthorizeNetModelFactory
         };
     }
 
-    private static string GetCustomerFirstNameOrFallback(IEnumerable<string> fields)
+    internal static string GetCustomerFirstNameOrFallback(IEnumerable<string?> fields)
     {
         string? firstName = fields
-            .Select(field => field?.Split(' ').FirstOrDefault())
+            .Select(field => field?.Trim().Split(' ').FirstOrDefault())
             .FirstOrDefault(field => !string.IsNullOrWhiteSpace(field));
 
-        if (firstName is not null)
-            return firstName;
-
-        return FallbackCustomerFirstName;
+        return firstName ?? FallbackCustomerFirstName;
     }
 
-    private static string GetCustomerLastNameOrFallback(IEnumerable<string> fields)
+    internal static string GetCustomerLastNameOrFallback(IEnumerable<string?> fields)
     {
         string? lastName = fields
-            .Select(field => string.Join(" ", field?.Split(' ').Skip(1) ?? []))
+            .Select(field => string.Join(" ", field?.Trim().Split(' ').Skip(1) ?? []))
             .FirstOrDefault(field => !string.IsNullOrWhiteSpace(field));
 
-        if (lastName is not null)
-            return lastName;
-
-        return FallbackCustomerLastName;
+        return lastName ?? FallbackCustomerLastName;
     }
 
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 }

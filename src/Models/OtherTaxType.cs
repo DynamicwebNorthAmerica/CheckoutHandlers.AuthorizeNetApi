@@ -1,25 +1,24 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class OtherTaxType
 {
-    [DataMember(Name = "nationalTaxAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("nationalTaxAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double NationalTaxAmount { get; set; }
 
-    [DataMember(Name = "localTaxAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("localTaxAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double LocalTaxAmount { get; set; }
 
-    [DataMember(Name = "alternateTaxAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("alternateTaxAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double AlternateTaxAmount { get; set; }
 
-    [DataMember(Name = "alternateTaxId", EmitDefaultValue = false)]
+    [JsonPropertyName("alternateTaxId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AlternateTaxId { get; set; }
 
-    [DataMember(Name = "vatTaxRate", EmitDefaultValue = false)]
+    [JsonPropertyName("vatTaxRate"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double VatTaxRate { get; set; }
 
-    [DataMember(Name = "vatTaxAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("vatTaxAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double VatTaxAmount { get; set; }
 }

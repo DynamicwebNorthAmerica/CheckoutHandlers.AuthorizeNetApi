@@ -1,13 +1,12 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CreateTransactionResponse
 {
-    [DataMember(Name = "transactionResponse")]
+    [JsonPropertyName("transactionResponse")]
     public TransactionResponse? TransactionResponse { get; set; }
 
-    [DataMember(Name = "messages", EmitDefaultValue = false)]
+    [JsonPropertyName("messages"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public MessagesType? Messages { get; set; }
 }

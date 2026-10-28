@@ -1,31 +1,30 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class NameAndAddressType
 {
-    [DataMember(Name = "firstName", EmitDefaultValue = false)]
+    [JsonPropertyName("firstName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? FirstName { get; set; }
 
-    [DataMember(Name = "lastName", EmitDefaultValue = false)]
+    [JsonPropertyName("lastName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? LastName { get; set; }
 
-    [DataMember(Name = "company", EmitDefaultValue = false)]
+    [JsonPropertyName("company"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Company { get; set; }
 
-    [DataMember(Name = "address", EmitDefaultValue = false)]
+    [JsonPropertyName("address"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Address { get; set; }
 
-    [DataMember(Name = "city", EmitDefaultValue = false)]
+    [JsonPropertyName("city"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? City { get; set; }
 
-    [DataMember(Name = "state", EmitDefaultValue = false)]
+    [JsonPropertyName("state"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? State { get; set; }
 
-    [DataMember(Name = "zip", EmitDefaultValue = false)]
+    [JsonPropertyName("zip"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Zip { get; set; }
 
-    [DataMember(Name = "country", EmitDefaultValue = false)]
+    [JsonPropertyName("country"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Country { get; set; }
 }

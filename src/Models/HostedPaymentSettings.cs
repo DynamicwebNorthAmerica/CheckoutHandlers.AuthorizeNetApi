@@ -1,11 +1,10 @@
 using System.Collections.Generic;
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class HostedPaymentSettings
 {
-    [DataMember(Name = "setting")]
+    [JsonPropertyName("setting")]
     public IEnumerable<Setting> Setting { get; set; } = [];
 }

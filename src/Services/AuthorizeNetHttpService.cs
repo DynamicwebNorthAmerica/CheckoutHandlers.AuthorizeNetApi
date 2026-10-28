@@ -1,82 +1,58 @@
-using Dynamicweb.Core;
 using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Constants;
 using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Exceptions;
 using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
 using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Services;
 
 /// <summary>
-/// Service to send request/response to Authorize.Net API endpoints.
+/// Sends requests to the Authorize.Net JSON API and the Webhooks REST API.
+/// One pooled HttpClient per environment is shared by all instances.
 /// </summary>
 internal sealed class AuthorizeNetHttpService
 {
-    private static readonly HttpClient ProductionHttpClient = CreateHttpClient(AuthorizeNetEndpoints.ProductionApiUrl);
-    private static readonly HttpClient SandboxHttpClient = CreateHttpClient(AuthorizeNetEndpoints.SandboxApiUrl);
+    private static readonly HttpClient ProductionHttpClient = CreateHttpClient(AuthorizeNetEndpoints.GetWebhookBaseUrl(isTestMode: false));
+    private static readonly HttpClient SandboxHttpClient = CreateHttpClient(AuthorizeNetEndpoints.GetWebhookBaseUrl(isTestMode: true));
 
     private readonly HttpClient _httpClient;
-    private readonly string _url;
-    private readonly bool _debugEnabled;
-    private readonly AuthorizeNetLogger? _logger;
+    private readonly string _apiUrl;
+    private readonly AuthorizeNetLogger _logger;
 
-    public AuthorizeNetHttpService(bool isTestMode, bool debugEnabled, AuthorizeNetLogger? logger)
+    public AuthorizeNetHttpService(bool isTestMode, AuthorizeNetLogger logger)
     {
-        _url = AuthorizeNetEndpoints.GetApiEndpoint(isTestMode);
-        _debugEnabled = debugEnabled;
+        _apiUrl = AuthorizeNetEndpoints.GetApiEndpoint(isTestMode);
         _logger = logger;
-        _httpClient = isTestMode
-            ? SandboxHttpClient
-            : ProductionHttpClient;
+        _httpClient = isTestMode ? SandboxHttpClient : ProductionHttpClient;
     }
 
+    /// <summary>
+    /// Posts a request to the JSON API endpoint (createTransactionRequest, getTransactionDetailsRequest, ...).
+    /// </summary>
     public T? Post<T>(string jsonObject)
-    {
-        return SendRequest<T>(HttpMethod.Post, _url, jsonObject, null);
-    }
+        => SendRequest<T>(HttpMethod.Post, _apiUrl, jsonObject, null);
 
     /// <summary>
-    /// Sends a POST request to specified endpoint with custom headers
+    /// Posts to a REST endpoint (relative to the environment base URL) with custom headers.
     /// </summary>
-    public T? Post<T>(string endpoint, string jsonObject, Dictionary<string, string>? headers)
-    {
-        return SendRequest<T>(HttpMethod.Post, endpoint, jsonObject, headers);
-    }
+    public T? Post<T>(string endpoint, string jsonObject, IReadOnlyDictionary<string, string>? headers)
+        => SendRequest<T>(HttpMethod.Post, endpoint, jsonObject, headers);
 
-    /// <summary>
-    /// Sends a GET request to specified endpoint with custom headers
-    /// </summary>
-    public T? Get<T>(string endpoint, Dictionary<string, string>? headers)
-    {
-        return SendRequest<T>(HttpMethod.Get, endpoint, null, headers);
-    }
+    public T? Get<T>(string endpoint, IReadOnlyDictionary<string, string>? headers)
+        => SendRequest<T>(HttpMethod.Get, endpoint, null, headers);
 
-    /// <summary>
-    /// Sends a PUT request to specified endpoint with custom headers
-    /// </summary>
-    public T? Put<T>(string endpoint, string jsonObject, Dictionary<string, string>? headers)
-    {
-        return SendRequest<T>(HttpMethod.Put, endpoint, jsonObject, headers);
-    }
+    public void Delete(string endpoint, IReadOnlyDictionary<string, string>? headers)
+        => SendRequest<object>(HttpMethod.Delete, endpoint, null, headers);
 
-    /// <summary>
-    /// Sends a DELETE request to specified endpoint with custom headers
-    /// </summary>
-    public void Delete(string endpoint, Dictionary<string, string>? headers)
+    private T? SendRequest<T>(HttpMethod method, string endpoint, string? jsonObject, IReadOnlyDictionary<string, string>? headers)
     {
-        SendRequest<object>(HttpMethod.Delete, endpoint, null, headers);
-    }
-
-    private T? SendRequest<T>(HttpMethod method, string endpoint, string? jsonObject, Dictionary<string, string>? headers)
-    {
-        var logger = _logger is not null
-            ? new AuthorizeNetRequestLogger(_logger)
-            : new AuthorizeNetRequestLogger(_debugEnabled);
-
+        var requestLogger = new AuthorizeNetRequestLogger(_logger);
         string responseText = string.Empty;
 
         try
@@ -85,95 +61,95 @@ internal sealed class AuthorizeNetHttpService
 
             if (jsonObject is not null)
             {
-                requestMessage.Content = new StringContent(jsonObject);
+                requestMessage.Content = new StringContent(jsonObject, Encoding.UTF8);
                 requestMessage.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
             }
 
-            // Add custom headers
             if (headers is not null)
             {
                 foreach ((string name, string value) in headers)
-                    requestMessage.Headers.Add(name, value);
+                    requestMessage.Headers.TryAddWithoutValidation(name, value);
             }
 
-            logger.LogRequest(requestMessage, jsonObject ?? "");
+            requestLogger.LogRequest(requestMessage, jsonObject ?? "");
 
-            using (HttpResponseMessage response = _httpClient.SendAsync(requestMessage)
-                .GetAwaiter().GetResult())
+            using HttpResponseMessage response = _httpClient.Send(requestMessage, HttpCompletionOption.ResponseContentRead);
+            responseText = ReadBody(response);
+            requestLogger.LogResponse(response, responseText);
+
+            if (method == HttpMethod.Delete)
             {
-                responseText = response.Content
-                    .ReadAsStringAsync()
-                    .GetAwaiter()
-                    .GetResult();
+                if (!response.IsSuccessStatusCode)
+                    throw new AuthorizeNetApiException($"DELETE {endpoint} failed with status {(int)response.StatusCode} {response.ReasonPhrase}");
 
-                logger.LogResponse(response, responseText);
-
-                // For DELETE requests, check status code rather than parsing content
-                if (method == HttpMethod.Delete)
-                {
-                    if (!response.IsSuccessStatusCode)
-                        throw new AuthorizeNetApiException($"DELETE request failed with status: {response.StatusCode}");
-
-                    return default(T);
-                }
-
-                // Check if response is an error before deserializing to T
-                if (TryParseError(responseText) is ErrorResponse errorResponse)
-                {
-                    string errorMessages = string.Join("; ",
-                        errorResponse.Messages?.Message?.Select(m => $"[{m.Code}] {m.Text}") ?? ["Unknown error"]);
-
-                    if (Converter.TryDeserialize(responseText, out CreateTransactionResponse? responseWrapper)
-                        && responseWrapper.TransactionResponse is TransactionResponse transactionResponse)
-                    {
-                        if (transactionResponse.Errors is not null)
-                        {
-                            string detailedErrors = string.Join("; ",
-                                transactionResponse.Errors.Select(e => $"[{e.ErrorCode}] {e.ErrorText}"));
-                            errorMessages += $" Details: {detailedErrors}";
-                        }
-                    }
-
-                    throw new AuthorizeNetApiException($"Authorize.Net API error: {errorMessages}", errorResponse);
-                }
-
-                return Converter.Deserialize<T>(responseText);
+                return default;
             }
+
+            if (TryParseError(responseText) is ErrorResponse errorResponse)
+                throw new AuthorizeNetApiException($"Authorize.Net API error: {DescribeError(errorResponse, responseText)}", errorResponse);
+
+            if (!response.IsSuccessStatusCode)
+                throw new AuthorizeNetApiException($"{method} {endpoint} failed with status {(int)response.StatusCode} {response.ReasonPhrase}");
+
+            if (string.IsNullOrWhiteSpace(responseText))
+                return default;
+
+            return AuthorizeNetJson.Deserialize<T>(responseText);
+        }
+        catch (AuthorizeNetApiException ex)
+        {
+            requestLogger.LogException(ex);
+            throw;
         }
         catch (Exception ex)
         {
-            logger.LogException(ex);
-
-            if (ex is AuthorizeNetApiException apiException)
-                throw apiException;
-
-            string message = ex.Message + $" Authorize.Net API response: {responseText}";
-            throw new Exception(message);
+            requestLogger.LogException(ex);
+            throw new AuthorizeNetApiException($"Authorize.Net request failed: {ex.Message}", ex);
         }
         finally
         {
-            logger.FinalizeLog();
+            requestLogger.FinalizeLog();
         }
     }
 
     /// <summary>
-    /// Tries to parse the response as an error response
+    /// Reads the body as UTF-8. Authorize.Net prefixes JSON responses with a byte order mark, which the
+    /// reader strips.
     /// </summary>
-    /// <param name="responseText">The response text from API</param>
-    /// <returns>ErrorResponse if it's an error, null otherwise</returns>
-    private static ErrorResponse? TryParseError(string responseText)
+    private static string ReadBody(HttpResponseMessage response)
     {
-        try
-        {
-            var errorResponse = Converter.Deserialize<ErrorResponse>(responseText);
+        using Stream stream = response.Content.ReadAsStream();
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return reader.ReadToEnd().TrimStart('﻿');
+    }
 
-            // Check if this looks like an error response
-            if (Enum.TryParse(errorResponse?.Messages?.ResultCode, true, out MessageTypeEnum resultCode) && resultCode is MessageTypeEnum.Error)
-                return errorResponse;
-        }
-        catch
+    private static string DescribeError(ErrorResponse errorResponse, string responseText)
+    {
+        string messages = string.Join("; ",
+            errorResponse.Messages?.Message?.Select(m => $"[{m.Code}] {m.Text}") ?? ["Unknown error"]);
+
+        if (AuthorizeNetJson.TryDeserialize(responseText, out CreateTransactionResponse? transactionWrapper)
+            && transactionWrapper.TransactionResponse?.Errors is { } errors && errors.Any())
         {
-            // Not an error response or couldn't parse - ignore
+            messages += " Details: " + string.Join("; ", errors.Select(e => $"[{e.ErrorCode}] {e.ErrorText}"));
+        }
+
+        return messages;
+    }
+
+    /// <summary>
+    /// Returns the parsed error when the response carries resultCode "Error", otherwise null.
+    /// </summary>
+    internal static ErrorResponse? TryParseError(string responseText)
+    {
+        if (string.IsNullOrWhiteSpace(responseText))
+            return null;
+
+        if (AuthorizeNetJson.TryDeserialize(responseText, out ErrorResponse? errorResponse)
+            && DataContractEnumConverter<MessageTypeEnum>.TryParse(errorResponse.Messages?.ResultCode, out MessageTypeEnum resultCode)
+            && resultCode is MessageTypeEnum.Error)
+        {
+            return errorResponse;
         }
 
         return null;
@@ -181,10 +157,14 @@ internal sealed class AuthorizeNetHttpService
 
     private static HttpClient CreateHttpClient(string baseAddress)
     {
-        return new HttpClient(new HttpClientHandler
+        var handler = new SocketsHttpHandler
         {
-            UseCookies = false
-        })
+            UseCookies = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            AutomaticDecompression = System.Net.DecompressionMethods.All
+        };
+
+        return new HttpClient(handler)
         {
             BaseAddress = new Uri(baseAddress),
             Timeout = TimeSpan.FromSeconds(90)

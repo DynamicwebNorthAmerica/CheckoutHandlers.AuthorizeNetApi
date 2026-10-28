@@ -1,13 +1,12 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class FDSFilter
 {
-    [DataMember(Name = "name", EmitDefaultValue = false)]
+    [JsonPropertyName("name"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Name { get; set; }
 
-    [DataMember(Name = "action", EmitDefaultValue = false)]
+    [JsonPropertyName("action"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public FdsFilterActionEnum? Action { get; set; }
 }

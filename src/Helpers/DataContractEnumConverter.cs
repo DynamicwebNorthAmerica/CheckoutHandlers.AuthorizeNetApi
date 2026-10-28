@@ -7,50 +7,61 @@ using System.Text.Json.Serialization;
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
 
 /// <summary>
-/// JSON converter for enums that supports EnumMember attributes for custom string values
+/// JSON converter for enums that honours <see cref="EnumMemberAttribute"/> values.
+/// Unknown values from the API map to a member named "Unknown" when the enum declares one,
+/// otherwise to the enum default, so that a new value introduced by Authorize.Net never breaks deserialization.
 /// </summary>
 /// <typeparam name="T">The enum type to convert</typeparam>
 internal sealed class DataContractEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
+    private const string UnknownMemberName = "Unknown";
+
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.String)
         {
-            var stringValue = reader.GetString();
+            string? stringValue = reader.GetString();
 
-            // First, try to find enum field by EnumMember value
-            foreach (var field in typeof(T).GetFields(BindingFlags.Public | BindingFlags.Static))
-            {
-                var enumMember = field.GetCustomAttribute<EnumMemberAttribute>();
-                if (string.Equals(enumMember?.Value, stringValue, StringComparison.Ordinal))
-                    return (T)field.GetValue(null)!;
-            }
-
-            // Fallback to standard enum parsing by name
-            if (Enum.TryParse<T>(stringValue, true, out T result))
-                return result;
+            if (TryParse(stringValue, out T parsed))
+                return parsed;
         }
         else if (reader.TokenType == JsonTokenType.Number)
         {
-            // Handle numeric enum values
             if (reader.TryGetInt32(out int intValue) && Enum.IsDefined(typeof(T), intValue))
                 return (T)Enum.ToObject(typeof(T), intValue);
         }
 
-        // Return default value if parsing fails
-        return default;
+        return GetFallbackValue();
     }
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
-    {
-        // Get the field info for the enum value
-        FieldInfo? fieldInfo = typeof(T).GetField(value.ToString());
-        EnumMemberAttribute? enumMember = fieldInfo?.GetCustomAttribute<EnumMemberAttribute>();
+        => writer.WriteStringValue(value.ToEnumMemberValue());
 
-        // Use EnumMember.Value if available, otherwise use enum name
-        if (!string.IsNullOrEmpty(enumMember?.Value))
-            writer.WriteStringValue(enumMember.Value);
-        else
-            writer.WriteStringValue(value.ToString());
+    /// <summary>
+    /// Parses an API string value by EnumMember value first, then by member name (case-insensitive).
+    /// </summary>
+    public static bool TryParse(string? stringValue, out T result)
+    {
+        result = default;
+        if (string.IsNullOrEmpty(stringValue))
+            return false;
+
+        foreach (FieldInfo field in typeof(T).GetFields(BindingFlags.Public | BindingFlags.Static))
+        {
+            EnumMemberAttribute? enumMember = field.GetCustomAttribute<EnumMemberAttribute>();
+            if (string.Equals(enumMember?.Value, stringValue, StringComparison.Ordinal))
+            {
+                result = (T)field.GetValue(null)!;
+                return true;
+            }
+        }
+
+        return Enum.TryParse(stringValue, true, out result) && Enum.IsDefined(typeof(T), result);
+    }
+
+    private static T GetFallbackValue()
+    {
+        FieldInfo? unknown = typeof(T).GetField(UnknownMemberName, BindingFlags.Public | BindingFlags.Static);
+        return unknown is not null ? (T)unknown.GetValue(null)! : default;
     }
 }

@@ -1,16 +1,15 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class PaymentMaskedType
 {
-    [DataMember(Name = "creditCard", EmitDefaultValue = false)]
+    [JsonPropertyName("creditCard"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CreditCardMaskedType? CreditCard { get; set; }
 
-    [DataMember(Name = "bankAccount", EmitDefaultValue = false)]
+    [JsonPropertyName("bankAccount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public BankAccountMaskedType? BankAccount { get; set; }
 
-    [DataMember(Name = "tokenInformation", EmitDefaultValue = false)]
+    [JsonPropertyName("tokenInformation"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TokenMaskedType? TokenInformation { get; set; }
 }
