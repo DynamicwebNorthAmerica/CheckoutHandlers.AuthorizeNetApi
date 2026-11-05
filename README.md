@@ -2,7 +2,7 @@
 
 Authorize.Net checkout handler for DynamicWeb 10, built on **Accept Hosted** (the Authorize.Net hosted payment page), **customer profiles** for saved cards and **webhooks** for capture, refund and void synchronization.
 
-Targets .NET 8 and DynamicWeb 10.26 or later, like the other Dynamicweb checkout handlers, so it installs on .NET 8 and .NET 10 hosts.
+Targets .NET 10 and DynamicWeb 10.30.
 
 ## Features
 
@@ -94,7 +94,7 @@ dotnet test tests/Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Tests
 
 The unit tests cover signature validation, log masking, enum and payload parsing, request/response shapes, the webhook registration policy, order matching, and API round trips through a stub HTTP handler (request bodies, error envelopes, the `E00011` hint).
 
-CI follows the other Dynamicweb checkout handlers: `pr.yml` and `main.yml` call the common build and NuGet push workflows in `dynamicweb/Common.Actions`, and `build-and-test.yml` runs the unit tests, which the common build does not. The test project lives in its own folder under `tests/` because the common build evaluates `**/*.csproj` from the repository root. End-to-end testing needs a DynamicWeb 10 site with a public URL and an Authorize.Net sandbox account: run a checkout with the [test card numbers](https://developer.authorize.net/hello_world/testing_guide.html), then capture, cancel and refund the order from the order list and check the order's debugging info.
+CI follows the other Dynamicweb checkout handlers: `pr.yml` and `main.yml` call the common build and NuGet push workflows in `dynamicweb/Common.Actions`, and `build-and-test.yml` runs the unit tests, which the common build does not. The test project lives in its own folder under `tests/` because the common build evaluates `**/*.csproj` from the repository root. The common build currently sets up the .NET 9 SDK, which cannot build a .NET 10 project; it needs the .NET 10 SDK before this handler builds there. End-to-end testing needs a DynamicWeb 10 site with a public URL and an Authorize.Net sandbox account: run a checkout with the [test card numbers](https://developer.authorize.net/hello_world/testing_guide.html), then capture, cancel and refund the order from the order list and check the order's debugging info.
 
 Project layout:
 
