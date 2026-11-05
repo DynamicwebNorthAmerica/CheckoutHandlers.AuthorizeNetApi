@@ -1,6 +1,7 @@
 using Dynamicweb.Core;
 using Dynamicweb.Ecommerce.Cart;
 using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Constants;
+using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Exceptions;
 using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
 using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Services;
@@ -15,7 +16,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Threading;
 using static Dynamicweb.Ecommerce.Orders.OrderCaptureInfo;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi;
@@ -26,15 +26,14 @@ namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi;
 /// API reference: https://developer.authorize.net/api/reference/index.html
 /// Webhooks: https://developer.authorize.net/api/reference/features/webhooks.html
 /// </summary>
-[AddInName("Authorize.Net API"), AddInDescription("AuthorizeNet API Checkout Handler"), AddInUseParameterGrouping(true)]
+[AddInName("Authorize.Net API"), AddInDescription("AuthorizeNet API Checkout Handler"), AddInUseParameterGrouping(true), AddInUseParameterOrdering(true)]
 public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullReturn, IPartialReturn, IRemoteCapture, ISavedCardAction, IParameterOptions, ICheckoutHandlerCallback
 {
     private const string ReceiptAction = "Receipt";
     private const string CancelAction = "Cancel";
     private const string SignatureHeaderName = "X-ANET-Signature";
     private const string RefundTransactionMarkerFormat = "[RefundTransId:{0}]";
-    private const int HostedFormVerificationAttempts = 3;
-    private static readonly TimeSpan HostedFormVerificationDelay = TimeSpan.FromSeconds(2);
+    private const string PendingVerificationStatus = "Pending verification";
     private static readonly TimeSpan WebhookCheckInterval = TimeSpan.FromHours(1);
 
     /// <summary>
@@ -43,22 +42,30 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
     /// </summary>
     private static readonly ConcurrentDictionary<string, DateTime> WebhookChecks = new();
 
+    /// <summary>
+    /// Serializes the customer's return and the webhooks of one order (striped by AutoId), so an order is
+    /// completed, and CheckoutDone runs, only once. In-process only: on a multi-instance host the
+    /// completed-order checks inside the lock still apply, but the two requests can overlap.
+    /// </summary>
+    private static readonly object[] OrderLocks = Enumerable.Range(0, 64).Select(_ => new object()).ToArray();
+
     private TransactionType _transactionType = TransactionType.AuthCaptureTransaction;
     private string _cancelTemplate = "";
     private string _errorTemplate = "";
+    private string _pendingTemplate = TemplateFolders.DefaultPendingTemplate;
 
     #region AddIn parameters
 
-    [AddInParameter("API login ID"), AddInParameterEditor(typeof(TextParameterEditor), "")]
+    [AddInParameter("API login ID"), AddInParameterEditor(typeof(TextParameterEditor), "NewGUI=true;infoText=The API Login ID from Account > Settings > Security Settings > API Credentials & Keys in the Authorize.Net Merchant Interface.;")]
     public string ApiLoginId { get; set; } = "";
 
-    [AddInParameter("Transaction key"), AddInParameterEditor(typeof(TextParameterEditor), "")]
+    [AddInParameter("Transaction key"), AddInParameterEditor(typeof(TextParameterEditor), "NewGUI=true;password=true;infoText=The Transaction Key from Account > Settings > Security Settings > API Credentials & Keys.;")]
     public string TransactionKey { get; set; } = "";
 
-    [AddInParameter("Signature key"), AddInParameterEditor(typeof(TextParameterEditor), "TextArea=true")]
+    [AddInParameter("Signature key"), AddInParameterEditor(typeof(TextParameterEditor), "NewGUI=true;password=true;TextArea=true;infoText=The Signature Key from Account > Settings > Security Settings > API Credentials & Keys. Used to verify webhook notifications.;")]
     public string SignatureKey { get; set; } = "";
 
-    [AddInParameter("Allow save cards"), AddInParameterEditor(typeof(YesNoParameterEditor), "")]
+    [AddInParameter("Allow save cards"), AddInParameterEditor(typeof(YesNoParameterEditor), "infoText=Lets signed-in customers store a card as an Authorize.Net customer payment profile.;")]
     public bool AllowSaveCards { get; set; }
 
     [AddInLabel("The type of credit card transaction"), AddInParameter("TypeOfTransaction"), AddInParameterEditor(typeof(RadioParameterEditor), "SortBy=Key")]
@@ -89,13 +96,20 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
         set => _errorTemplate = value;
     }
 
-    [AddInLabel("Enable debug logging"), AddInParameter("DebugLogging"), AddInParameterEditor(typeof(YesNoParameterEditor), "")]
+    [AddInLabel("Pending template"), AddInParameter("PendingTemplate"), AddInParameterGroup("Template settings"), AddInParameterEditor(typeof(TemplateParameterEditor), $"folder=Templates/{TemplateFolders.PendingTemplateFolder}")]
+    public string PendingTemplate
+    {
+        get => TemplateHelper.GetTemplateName(_pendingTemplate);
+        set => _pendingTemplate = value;
+    }
+
+    [AddInLabel("Enable debug logging"), AddInParameter("DebugLogging"), AddInParameterEditor(typeof(YesNoParameterEditor), "infoText=Writes masked API requests and responses to the order debugging info and the system log. Errors are always logged.;")]
     public bool DebugLogging { get; set; }
 
-    [AddInLabel("Enable auto webhook registration"), AddInParameter("EnableAutoWebhookRegistration"), AddInParameterGroup("Webhook settings"), AddInParameterEditor(typeof(YesNoParameterEditor), "")]
+    [AddInLabel("Enable auto webhook registration"), AddInParameter("EnableAutoWebhookRegistration"), AddInParameterGroup("Webhook settings"), AddInParameterEditor(typeof(YesNoParameterEditor), "infoText=Checks at checkout, at most once an hour, that the webhook subscription for this site exists, and creates it when missing. Orders are completed by webhooks when the customer does not return from the payment page.;")]
     public bool EnableAutoWebhookRegistration { get; set; }
 
-    [AddInLabel("Force webhook re-registration"), AddInParameter("ForceWebhookRegistration"), AddInParameterGroup("Webhook settings"), AddInParameterEditor(typeof(YesNoParameterEditor), "")]
+    [AddInLabel("Force webhook re-registration"), AddInParameter("ForceWebhookRegistration"), AddInParameterGroup("Webhook settings"), AddInParameterEditor(typeof(YesNoParameterEditor), "infoText=Re-creates the webhook subscription at the next checkout, then clears itself.;")]
     public bool ForceWebhookRegistration { get; set; }
 
     #endregion
@@ -128,6 +142,15 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
                 return OnError(order, "The payment method is not configured correctly.", $"Configuration errors: {string.Join("; ", configuration.SecurityIssues)}");
 
             TryRegisterWebhooks(order);
+
+            if (order.TransactionStatus == PendingVerificationStatus)
+            {
+                // The customer came back before an earlier payment could be verified and is checking out again.
+                // If that payment exists by now, complete the order with it instead of charging a second time.
+                LogEvent(order, "Order has an unverified earlier payment; looking it up before starting a new one");
+                if (TryVerifyHostedFormPayment(order) is { } verified)
+                    return verified;
+            }
 
             return RedirectToHostedForm(order);
         }
@@ -203,7 +226,7 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
             ]
         };
 
-        GetHostedPaymentPageResponse? response = service.GetHostedPaymentPage(order, orderAmount, _transactionType, NeedSaveCard(order, out _), settings);
+        GetHostedPaymentPageResponse? response = service.GetHostedPaymentPage(order, orderAmount, _transactionType, settings);
 
         if (IsResponseSuccessful(response, order))
         {
@@ -219,67 +242,126 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
 
     /// <summary>
     /// The customer is back from the hosted payment page. The redirect carries no transaction data, so the
-    /// payment is verified against the API before the order is completed: the newest unsettled transaction
-    /// for this order id must exist, be approved or held for review, and match the order amount.
+    /// payment is verified against the API before the order is completed. When no transaction can be found
+    /// yet, the order is left as it is and the pending page is shown; the webhook completes the order.
     /// </summary>
     private OutputResult HandleHostedFormReturn(Order order)
     {
         LogEvent(order, "Customer returned from the hosted payment page");
 
-        if (order.Complete)
+        lock (GetOrderLock(order))
         {
-            LogEvent(order, "Order is already complete (webhook processed before the customer returned)");
-            return PassToCart(order);
+            return TryVerifyHostedFormPayment(order) ?? PaymentPending(order);
         }
-
-        AuthorizeNetService service = GetAuthorizeNetService(order);
-        TransactionDetailsType? transaction = FindHostedFormTransaction(order, service);
-
-        if (transaction is null)
-        {
-            return OnError(order,
-                "The payment could not be verified. If your card was charged, please contact the store before trying again.",
-                $"No unsettled Authorize.Net transaction found for order {order.Id} after {HostedFormVerificationAttempts} attempts.");
-        }
-
-        PaymentOutcome outcome = PaymentOutcome.FromTransactionDetails(transaction);
-
-        if (outcome.ResponseCode is ResponseCodes.Declined or ResponseCodes.Error)
-            return OrderRefused(order, transaction.ResponseReasonDescription ?? TransactionDetailsHelper.GetResponseTextByCode(outcome.ResponseCode));
-
-        double orderAmount = OrderHelper.GetOrderAmount(order);
-        if (!OrderHelper.AmountsEqual(outcome.Amount, orderAmount))
-        {
-            return OnError(order,
-                "The payment amount does not match the order. Please contact the store.",
-                $"Transaction {outcome.TransId} amount {outcome.Amount} does not match order amount {orderAmount}.");
-        }
-
-        return CompleteOrder(order, outcome);
-    }
-
-    private TransactionDetailsType? FindHostedFormTransaction(Order order, AuthorizeNetService service)
-    {
-        for (int attempt = 1; attempt <= HostedFormVerificationAttempts; attempt++)
-        {
-            TransactionSummaryType? summary = service.FindUnsettledTransaction(order.Id);
-            if (summary is not null)
-            {
-                LogEvent(order, "Found transaction {0} for the order (attempt {1})", summary.TransId, attempt);
-                return service.GetTransactionDetails(summary.TransId);
-            }
-
-            if (attempt < HostedFormVerificationAttempts)
-                Thread.Sleep(HostedFormVerificationDelay);
-        }
-
-        return null;
     }
 
     /// <summary>
-    /// Records an accepted payment on the order and completes the checkout.
+    /// Verifies the hosted-form payment of the order: the newest unsettled transaction with the order id as
+    /// invoice number must be approved or held for review and match the order amount.
+    /// Returns null when no transaction can be found (not visible in the API yet, or the lookup failed).
+    /// </summary>
+    private OutputResult? TryVerifyHostedFormPayment(Order order)
+    {
+        lock (GetOrderLock(order))
+        {
+            if (FindCompletedCopy(order) is { } completed)
+            {
+                LogEvent(order, "Order is already complete (webhook processed before the customer returned)");
+                return PassToCart(completed);
+            }
+
+            TransactionDetailsType? transaction = FindHostedFormTransaction(order);
+            if (transaction is null)
+                return null;
+
+            PaymentOutcome outcome = PaymentOutcome.FromTransactionDetails(transaction);
+
+            if (outcome.ResponseCode is ResponseCodes.Declined or ResponseCodes.Error)
+                return OrderRefused(order, transaction.ResponseReasonDescription ?? TransactionDetailsHelper.GetResponseTextByCode(outcome.ResponseCode));
+
+            double orderAmount = OrderHelper.GetOrderAmount(order);
+            if (!OrderHelper.AmountsEqual(outcome.Amount, orderAmount))
+            {
+                return OnError(order,
+                    "The payment amount does not match the order. Please contact the store.",
+                    $"Transaction {outcome.TransId} amount {outcome.Amount} does not match order amount {orderAmount}.");
+            }
+
+            return CompleteOrder(order, outcome);
+        }
+    }
+
+    private TransactionDetailsType? FindHostedFormTransaction(Order order)
+    {
+        try
+        {
+            AuthorizeNetService service = GetAuthorizeNetService(order);
+            TransactionSummaryType? summary = service.FindUnsettledTransaction(order.Id);
+            if (summary is null)
+            {
+                LogEvent(order, "No unsettled transaction with invoice number {0} yet", order.Id);
+                return null;
+            }
+
+            LogEvent(order, "Found transaction {0} for the order", summary.TransId);
+            return service.GetTransactionDetails(summary.TransId);
+        }
+        catch (AuthorizeNetApiException ex)
+        {
+            // E00011 (Transaction Details API disabled) lands here; the message says how to enable it.
+            LogError(order, ex, "The payment could not be verified: {0}", ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The payment cannot be verified yet. The order is not downgraded, because the customer may have paid:
+    /// it keeps its state, is marked as pending verification and is completed by the webhook. A new checkout
+    /// of the same cart first looks for this payment again (see <see cref="BeginCheckout"/>).
+    /// </summary>
+    private OutputResult PaymentPending(Order order)
+    {
+        LogEvent(order, "Payment not verified yet; the order is completed when the webhook arrives");
+
+        order.TransactionStatus = PendingVerificationStatus;
+        Save(order);
+
+        string templateName = string.IsNullOrWhiteSpace(PendingTemplate) ? TemplateFolders.DefaultPendingTemplate : PendingTemplate;
+        var pendingTemplate = new Template(TemplateHelper.GetTemplatePath(templateName, TemplateFolders.PendingTemplateFolder));
+        pendingTemplate.SetTag("CheckoutHandler:PendingMessage",
+            "Your payment is being confirmed. You will receive an order confirmation by e-mail when it is complete. Please do not pay again.");
+        // Same URL as the return from the hosted page: opening it verifies the payment again.
+        pendingTemplate.SetTag("CheckoutHandler:CheckAgainUrl", $"{GetBaseUrl(order)}&action={ReceiptAction}");
+
+        return new ContentOutputResult
+        {
+            Content = Render(order, pendingTemplate)
+        };
+    }
+
+    /// <summary>
+    /// Records an accepted payment on the order and completes the checkout, unless another request
+    /// (the webhook, or the customer's return) has completed the order already.
     /// </summary>
     private OutputResult CompleteOrder(Order order, PaymentOutcome outcome)
+    {
+        lock (GetOrderLock(order))
+        {
+            if (FindCompletedCopy(order) is { } completed)
+            {
+                LogEvent(order, "Payment {0} accepted, but the order was completed by another request", outcome.TransId);
+                return PassToCart(completed);
+            }
+
+            ApplyPaymentOutcome(order, outcome);
+            MarkOrderComplete(order, order.TransactionNumber);
+            CheckoutDone(order);
+        }
+
+        return PassToCart(order);
+    }
+
+    private void ApplyPaymentOutcome(Order order, PaymentOutcome outcome)
     {
         LogEvent(order, "Payment accepted. Transaction: {0}, response code: {1}", outcome.TransId, outcome.ResponseCode);
         bool needSaveCard = NeedSaveCard(order, out string cardName);
@@ -311,18 +393,6 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
             else
                 order.GatewayPaymentStatus = $"{SecuritySettings.SavedCardNamePlaceholder}{cardName}";
         }
-
-        if (!order.Complete)
-        {
-            MarkOrderComplete(order, order.TransactionNumber);
-            CheckoutDone(order);
-        }
-        else
-        {
-            Save(order);
-        }
-
-        return PassToCart(order);
     }
 
     private OutputResult OrderCancelled(Order order)
@@ -587,6 +657,9 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
             if (!IsResponseSuccessful(response, order) || string.IsNullOrWhiteSpace(response.TransactionResponse?.TransId))
                 return CaptureFailed(order, GetErrorText(response) ?? "Capture failed");
 
+            // Recorded here so refunds work without the capture webhook; the webhook only adds a capture it
+            // does not see on the order yet (HandleCaptureDelta).
+            order.CaptureAmount = captureAmount;
             order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(TransactionStatusEnum.CapturedPendingSettlement);
             Save(order);
 
@@ -745,7 +818,9 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
 
     /// <summary>
     /// Resolves the order a webhook notification belongs to. The refId sent with every request comes
-    /// back as merchantReferenceId; invoiceNumber is the fallback.
+    /// back as merchantReferenceId; invoiceNumber (an order id) is the fallback. Webhooks arrive for every
+    /// transaction on the merchant account, so HandleCallback checks that the transaction really belongs
+    /// to the order before anything is changed.
     /// </summary>
     public static Order GetOrderFromCallback(CallbackData data)
     {
@@ -774,7 +849,7 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
                 return null;
             }
 
-            Order? order = FindOrder(payload.MerchantReferenceId) ?? FindOrder(payload.InvoiceNumber);
+            Order? order = FindOrderByRefId(payload.MerchantReferenceId) ?? FindOrderById(payload.InvoiceNumber);
             if (order is null)
             {
                 logger.LogError("Order not found for webhook reference: {0}", orderId);
@@ -793,24 +868,33 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
     }
 
     /// <summary>
-    /// Finds an order by the reference Authorize.Net echoes back: the numeric AutoId sent as refId, or an order id.
+    /// Finds an order by the refId Authorize.Net echoes back as merchantReferenceId: "DW-{AutoId}", or an order
+    /// id when the order had no AutoId yet.
     /// </summary>
-    private static Order? FindOrder(string? reference)
+    private static Order? FindOrderByRefId(string? refId)
     {
-        if (string.IsNullOrWhiteSpace(reference))
+        if (string.IsNullOrWhiteSpace(refId))
             return null;
 
-        reference = reference.Trim();
+        refId = refId.Trim();
 
-        return int.TryParse(reference, out int autoId)
+        return OrderHelper.TryParseAutoIdRefId(refId, out int autoId)
             ? Ecommerce.Services.Orders.GetByAutoId(autoId)
-            : Ecommerce.Services.Orders.GetById(reference);
+            : FindOrderById(refId);
     }
 
+    private static Order? FindOrderById(string? orderId)
+        => string.IsNullOrWhiteSpace(orderId) ? null : Ecommerce.Services.Orders.GetById(orderId.Trim());
+
     /// <summary>
-    /// Processes a webhook notification. The signature is verified first; the notification is only a trigger,
-    /// the transaction data is always re-read from the API.
+    /// Processes a webhook notification. The signature is verified first; the notification is only a trigger:
+    /// the transaction is re-read from the API and must belong to the order (see
+    /// <see cref="OrderHelper.IsTransactionForOrder"/>) before the order is changed.
     /// </summary>
+    /// <remarks>
+    /// Always answers 200. Authorize.Net retries other answers up to ten times and then deactivates the
+    /// webhook for the whole account, so a notification that keeps failing must not be answered with an error.
+    /// </remarks>
     public OutputResult HandleCallback(Order order, CallbackData data)
     {
         if (order is null)
@@ -854,41 +938,55 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
 
             LogEvent(order, "Processing webhook event {0} for transaction {1}", notification.EventType, payload.Id);
 
-            switch (eventType)
+            lock (GetOrderLock(order))
             {
-                case NotificationEventType.AuthCaptureCreated:
-                case NotificationEventType.AuthCreated:
-                    HandleAuthOrCaptureCallback(order, payload, eventType is NotificationEventType.AuthCaptureCreated);
-                    break;
+                // The order was loaded before the lock was taken; the customer's return may have completed it since.
+                order = ReloadOrder(order);
 
-                case NotificationEventType.CaptureCreated:
-                case NotificationEventType.PriorAuthCaptureCreated:
-                    HandleCaptureCallback(order, payload);
-                    break;
+                TransactionDetailsType details = GetAuthorizeNetService(order).GetTransactionDetails(payload.Id);
+                if (!OrderHelper.IsTransactionForOrder(order, details.TransId, details.RefTransId, details.Order?.InvoiceNumber))
+                {
+                    LogError(order, "Webhook {0} ignored: transaction {1} (refTransId {2}, invoice {3}) does not belong to this order (transaction number {4})",
+                        notification.EventType, details.TransId, details.RefTransId, details.Order?.InvoiceNumber, order.TransactionNumber);
+                    return ContentOutputResult.Empty;
+                }
 
-                case NotificationEventType.RefundCreated:
-                    HandleRefundCallback(order, payload);
-                    break;
+                switch (eventType)
+                {
+                    case NotificationEventType.AuthCaptureCreated:
+                    case NotificationEventType.AuthCreated:
+                        HandleAuthOrCaptureCallback(order, details, eventType is NotificationEventType.AuthCaptureCreated);
+                        break;
 
-                case NotificationEventType.VoidCreated:
-                    HandleVoidCallback(order, payload);
-                    break;
+                    case NotificationEventType.CaptureCreated:
+                    case NotificationEventType.PriorAuthCaptureCreated:
+                        HandleCaptureCallback(order, details);
+                        break;
 
-                case NotificationEventType.FraudHeld:
-                    HandleHeldForReview(order, payload.Id);
-                    break;
+                    case NotificationEventType.RefundCreated:
+                        HandleRefundCallback(order, details);
+                        break;
 
-                case NotificationEventType.FraudApproved:
-                    HandleFraudApproved(order, payload.Id);
-                    break;
+                    case NotificationEventType.VoidCreated:
+                        HandleVoidCallback(order, details);
+                        break;
 
-                case NotificationEventType.FraudDeclined:
-                    HandleFraudDeclined(order, payload.Id);
-                    break;
+                    case NotificationEventType.FraudHeld:
+                        HandleHeldForReview(order, details);
+                        break;
 
-                default:
-                    LogEvent(order, "Unhandled webhook event type: {0}", notification.EventType);
-                    break;
+                    case NotificationEventType.FraudApproved:
+                        HandleFraudApproved(order, details);
+                        break;
+
+                    case NotificationEventType.FraudDeclined:
+                        HandleFraudDeclined(order, details);
+                        break;
+
+                    default:
+                        LogEvent(order, "Unhandled webhook event type: {0}", notification.EventType);
+                        break;
+                }
             }
 
             LogEvent(order, "Webhook callback processing completed");
@@ -901,252 +999,205 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
         return ContentOutputResult.Empty;
     }
 
-    private void HandleAuthOrCaptureCallback(Order order, NotificationPayload payload, bool isCaptured)
+    private void HandleAuthOrCaptureCallback(Order order, TransactionDetailsType details, bool isCaptured)
     {
-        if (payload.ResponseCode == ResponseCodes.HeldForReview)
+        if (details.ResponseCode == ResponseCodes.HeldForReview)
         {
-            HandleHeldForReview(order, payload.Id);
+            HandleHeldForReview(order, details);
             return;
         }
 
-        if (payload.ResponseCode != ResponseCodes.Approved)
+        if (details.ResponseCode != ResponseCodes.Approved)
         {
-            order.TransactionStatus = $"Authorisation failed: {TransactionDetailsHelper.GetResponseTextByCode(payload.ResponseCode)}";
+            order.TransactionStatus = $"Authorisation failed: {TransactionDetailsHelper.GetResponseTextByCode(details.ResponseCode)}";
             Save(order);
             return;
         }
 
         if (isCaptured)
         {
-            SynchronizeOrderWithCapture(order, payload.Id);
+            SynchronizeOrderWithCapture(order, details);
             return;
         }
 
-        try
+        UpdateBasicTransactionInfo(order, details);
+        UpdateCardInformation(order, details);
+
+        double orderAmount = OrderHelper.GetOrderAmount(order);
+        double authAmount = details.AuthAmount > 0 ? details.AuthAmount : orderAmount;
+        order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(details.TransactionStatus);
+
+        if (!OrderHelper.AmountsEqual(authAmount, orderAmount))
         {
-            AuthorizeNetService service = GetAuthorizeNetService(order);
-            TransactionDetailsType transactionDetails = service.GetTransactionDetails(payload.Id);
-
-            UpdateBasicTransactionInfo(order, transactionDetails);
-            UpdateCardInformation(order, transactionDetails);
-
-            double orderAmount = OrderHelper.GetOrderAmount(order);
-            double authAmount = transactionDetails.AuthAmount > 0 ? transactionDetails.AuthAmount : orderAmount;
-            order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(transactionDetails.TransactionStatus);
-
-            if (!OrderHelper.AmountsEqual(authAmount, orderAmount))
-            {
-                // Same rule as the receipt path: an authorization that does not cover the order is not a payment.
-                LogError(order, "Authorized amount {0} does not match the order amount {1}; the order is left incomplete for review",
-                    FormatAmount(order, authAmount), FormatAmount(order, orderAmount));
-                Save(order);
-                return;
-            }
-
-            if (!OrderHelper.AmountsEqual(order.TransactionAmount, authAmount))
-            {
-                order.TransactionAmount = authAmount;
-                LogEvent(order, "Updated authorization amount: {0}", FormatAmount(order, authAmount));
-            }
-
-            CompleteOrderFromWebhook(order, transactionDetails.TransId);
+            // Same rule as the receipt path: an authorization that does not cover the order is not a payment.
+            LogError(order, "Authorized amount {0} does not match the order amount {1}; the order is left incomplete for review",
+                FormatAmount(order, authAmount), FormatAmount(order, orderAmount));
             Save(order);
-        }
-        catch (Exception ex)
-        {
-            LogError(order, ex, "Failed to process authorization callback: {0}", ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// A transaction held by the Authorize.Net fraud filters. Same outcome as on the receipt path: the order
-    /// is completed with the status "Held for Review" so the merchant can approve or decline it in the
-    /// Merchant Interface; the fraud.approved / fraud.declined webhooks finish the story.
-    /// </summary>
-    private void HandleHeldForReview(Order order, string transactionId)
-    {
-        order.TransactionStatus = TransactionDetailsHelper.GetResponseTextByCode(ResponseCodes.HeldForReview);
-        OrderHelper.UpdateTransactionNumber(order, transactionId);
-
-        try
-        {
-            TransactionDetailsType transactionDetails = GetAuthorizeNetService(order).GetTransactionDetails(transactionId);
-            UpdateCardInformation(order, transactionDetails);
-            double amount = transactionDetails.AuthAmount > 0 ? transactionDetails.AuthAmount : transactionDetails.SettleAmount;
-            if (amount > 0)
-                order.TransactionAmount = amount;
-        }
-        catch (Exception ex)
-        {
-            LogError(order, ex, "Held transaction {0} could not be read; amount and card data are updated when the review completes: {1}", transactionId, ex.Message);
+            return;
         }
 
-        LogEvent(order, "Transaction {0} is held for review", transactionId);
-        CompleteOrderFromWebhook(order, transactionId);
+        if (!OrderHelper.AmountsEqual(order.TransactionAmount, authAmount))
+        {
+            order.TransactionAmount = authAmount;
+            LogEvent(order, "Updated authorization amount: {0}", FormatAmount(order, authAmount));
+        }
+
+        CompleteOrderFromWebhook(order, details.TransId);
         Save(order);
     }
 
     /// <summary>
-    /// The merchant approved a held transaction. The transaction is re-read: an authorization-and-capture
-    /// transaction is now captured, an authorization-only one is pending capture.
+    /// A transaction held by the Authorize.Net fraud filters. Same outcome as on the receipt path: when the
+    /// held amount covers the order, the order is completed with the status "Held for Review" so the merchant
+    /// can approve or decline it in the Merchant Interface; the fraud.approved / fraud.declined webhooks
+    /// finish the story.
     /// </summary>
-    private void HandleFraudApproved(Order order, string transactionId)
+    private void HandleHeldForReview(Order order, TransactionDetailsType details)
     {
-        try
+        UpdateBasicTransactionInfo(order, details);
+        UpdateCardInformation(order, details);
+        order.TransactionStatus = TransactionDetailsHelper.GetResponseTextByCode(ResponseCodes.HeldForReview);
+
+        double heldAmount = details.AuthAmount > 0 ? details.AuthAmount : details.SettleAmount;
+        double orderAmount = OrderHelper.GetOrderAmount(order);
+
+        if (!order.Complete && !OrderHelper.AmountsEqual(heldAmount, orderAmount))
         {
-            TransactionDetailsType transactionDetails = GetAuthorizeNetService(order).GetTransactionDetails(transactionId);
-
-            LogEvent(order, "Held transaction {0} approved; status {1}", transactionId, transactionDetails.TransactionStatus);
-            UpdateBasicTransactionInfo(order, transactionDetails);
-            UpdateCardInformation(order, transactionDetails);
-
-            if (transactionDetails.SettleAmount > 0
-                && transactionDetails.TransactionStatus is TransactionStatusEnum.CapturedPendingSettlement or TransactionStatusEnum.SettledSuccessfully)
-            {
-                HandleCaptureDelta(order, transactionDetails.SettleAmount, transactionDetails.TransId);
-            }
-
-            if (transactionDetails.AuthAmount > 0)
-                order.TransactionAmount = transactionDetails.AuthAmount;
-
-            order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(transactionDetails.TransactionStatus);
-            CompleteOrderFromWebhook(order, transactionDetails.TransId);
+            LogError(order, "Held amount {0} does not match the order amount {1}; the order is left incomplete for review",
+                FormatAmount(order, heldAmount), FormatAmount(order, orderAmount));
             Save(order);
+            return;
         }
-        catch (Exception ex)
-        {
-            LogError(order, ex, "Failed to process fraud approval for transaction {0}: {1}", transactionId, ex.Message);
-        }
+
+        order.TransactionAmount = heldAmount;
+        LogEvent(order, "Transaction {0} is held for review", details.TransId);
+        CompleteOrderFromWebhook(order, details.TransId);
+        Save(order);
     }
 
     /// <summary>
-    /// The merchant declined a held transaction: no money moves, the order keeps its history.
+    /// The merchant approved a held transaction: an authorization-and-capture transaction is now captured,
+    /// an authorization-only one is pending capture.
     /// </summary>
-    private void HandleFraudDeclined(Order order, string transactionId)
+    private void HandleFraudApproved(Order order, TransactionDetailsType details)
+    {
+        LogEvent(order, "Held transaction {0} approved; status {1}", details.TransId, details.TransactionStatus);
+        UpdateBasicTransactionInfo(order, details);
+        UpdateCardInformation(order, details);
+
+        if (details.SettleAmount > 0
+            && details.TransactionStatus is TransactionStatusEnum.CapturedPendingSettlement or TransactionStatusEnum.SettledSuccessfully)
+        {
+            HandleCaptureDelta(order, details.SettleAmount, details.TransId);
+        }
+
+        if (details.AuthAmount > 0)
+            order.TransactionAmount = details.AuthAmount;
+
+        order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(details.TransactionStatus);
+        CompleteOrderFromWebhook(order, details.TransId);
+        Save(order);
+    }
+
+    /// <summary>
+    /// The merchant declined a held transaction: no money moves. The order stays complete (it was completed
+    /// when the transaction was held) and keeps its history; its status tells the merchant not to ship it.
+    /// </summary>
+    private void HandleFraudDeclined(Order order, TransactionDetailsType details)
     {
         order.TransactionStatus = "Declined after review";
         if (order.CaptureInfo?.State is OrderCaptureState.Success or OrderCaptureState.Split)
             order.CaptureInfo = new OrderCaptureInfo(OrderCaptureState.Failed, "Transaction declined by the merchant after fraud review");
 
         Save(order);
-        LogEvent(order, "Held transaction {0} was declined after review", transactionId);
+        LogError(order, "Held transaction {0} was declined after review; the order must not be fulfilled", details.TransId);
     }
 
-    private void HandleCaptureCallback(Order order, NotificationPayload payload)
+    private void HandleCaptureCallback(Order order, TransactionDetailsType details)
     {
-        if (payload.ResponseCode != ResponseCodes.Approved)
+        if (details.ResponseCode != ResponseCodes.Approved)
         {
-            order.CaptureInfo = new OrderCaptureInfo(OrderCaptureState.Failed, $"Capture failed: {TransactionDetailsHelper.GetResponseTextByCode(payload.ResponseCode)}");
+            order.CaptureInfo = new OrderCaptureInfo(OrderCaptureState.Failed, $"Capture failed: {TransactionDetailsHelper.GetResponseTextByCode(details.ResponseCode)}");
             Save(order);
             return;
         }
 
-        SynchronizeOrderWithCapture(order, payload.Id);
+        SynchronizeOrderWithCapture(order, details);
     }
 
-    private void HandleRefundCallback(Order order, NotificationPayload payload)
+    private void HandleRefundCallback(Order order, TransactionDetailsType details)
     {
-        if (payload.ResponseCode != ResponseCodes.Approved)
+        if (details.ResponseCode != ResponseCodes.Approved)
         {
             OrderReturnInfo.SaveReturnOperation(OrderReturnOperationState.Failed,
-                $"Order refund failed: {TransactionDetailsHelper.GetResponseTextByCode(payload.ResponseCode)}", 0, order);
+                $"Order refund failed: {TransactionDetailsHelper.GetResponseTextByCode(details.ResponseCode)}", 0, order);
             return;
         }
 
-        SynchronizeOrderWithRefund(order, payload.Id);
+        SynchronizeOrderWithRefund(order, details);
     }
 
-    private void HandleVoidCallback(Order order, NotificationPayload payload)
+    private void HandleVoidCallback(Order order, TransactionDetailsType details)
     {
-        if (payload.ResponseCode != ResponseCodes.Approved)
+        if (details.ResponseCode != ResponseCodes.Approved)
         {
             // A failed void leaves the capture state as it was.
-            LogError(order, "Void transaction {0} was not approved: {1}", payload.Id, TransactionDetailsHelper.GetResponseTextByCode(payload.ResponseCode));
+            LogError(order, "Void transaction {0} was not approved: {1}", details.TransId, TransactionDetailsHelper.GetResponseTextByCode(details.ResponseCode));
             return;
         }
 
-        SynchronizeOrderWithVoid(order, payload.Id);
+        SynchronizeOrderWithVoid(order, details);
     }
 
     /// <summary>
-    /// Re-reads a capture transaction from the API and records any newly captured amount.
+    /// Records any newly captured amount of a capture transaction.
     /// </summary>
-    private void SynchronizeOrderWithCapture(Order order, string transactionId)
+    private void SynchronizeOrderWithCapture(Order order, TransactionDetailsType details)
     {
-        try
-        {
-            AuthorizeNetService service = GetAuthorizeNetService(order);
-            TransactionDetailsType transactionDetails = service.GetTransactionDetails(transactionId);
+        LogEvent(order, "Synchronizing order with capture transaction {0}", details.TransId);
+        UpdateBasicTransactionInfo(order, details);
+        UpdateCardInformation(order, details);
 
-            LogEvent(order, "Synchronizing order with capture transaction {0}", transactionId);
-            UpdateBasicTransactionInfo(order, transactionDetails);
-            UpdateCardInformation(order, transactionDetails);
+        if (details.SettleAmount > 0)
+            HandleCaptureDelta(order, details.SettleAmount, details.TransId);
 
-            if (transactionDetails.SettleAmount > 0)
-                HandleCaptureDelta(order, transactionDetails.SettleAmount, transactionDetails.TransId);
+        order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(details.TransactionStatus);
 
-            order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(transactionDetails.TransactionStatus);
-
-            Save(order);
-            LogEvent(order, "Capture synchronization completed");
-        }
-        catch (Exception ex)
-        {
-            LogError(order, ex, "Failed to synchronize capture with API data: {0}", ex.Message);
-        }
+        Save(order);
+        LogEvent(order, "Capture synchronization completed");
     }
 
     /// <summary>
-    /// Re-reads a refund transaction from the API. Each refund is its own transaction; its settleAmount
-    /// is the amount of that refund, not a running total.
+    /// Records a refund transaction. Each refund is its own transaction; its settleAmount is the amount of
+    /// that refund, not a running total.
     /// </summary>
-    private void SynchronizeOrderWithRefund(Order order, string transactionId)
+    private void SynchronizeOrderWithRefund(Order order, TransactionDetailsType details)
     {
-        try
-        {
-            AuthorizeNetService service = GetAuthorizeNetService(order);
-            TransactionDetailsType transactionDetails = service.GetTransactionDetails(transactionId);
+        LogEvent(order, "Synchronizing order with refund transaction {0}", details.TransId);
 
-            LogEvent(order, "Synchronizing order with refund transaction {0}", transactionId);
+        if (details.SettleAmount > 0)
+            HandleRefundDelta(order, details.SettleAmount, details.TransId);
 
-            if (transactionDetails.SettleAmount > 0)
-                HandleRefundDelta(order, transactionDetails.SettleAmount, transactionDetails.TransId);
+        order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(details.TransactionStatus);
 
-            order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(transactionDetails.TransactionStatus);
-
-            Save(order);
-            LogEvent(order, "Refund synchronization completed");
-        }
-        catch (Exception ex)
-        {
-            LogError(order, ex, "Failed to synchronize refund with API data: {0}", ex.Message);
-        }
+        Save(order);
+        LogEvent(order, "Refund synchronization completed");
     }
 
-    private void SynchronizeOrderWithVoid(Order order, string transactionId)
+    private void SynchronizeOrderWithVoid(Order order, TransactionDetailsType details)
     {
-        try
-        {
-            AuthorizeNetService service = GetAuthorizeNetService(order);
-            TransactionDetailsType transactionDetails = service.GetTransactionDetails(transactionId);
+        LogEvent(order, "Synchronizing order with void transaction {0}", details.TransId);
+        UpdateBasicTransactionInfo(order, details);
 
-            LogEvent(order, "Synchronizing order with void transaction {0}", transactionId);
-            UpdateBasicTransactionInfo(order, transactionDetails);
+        if (order.CaptureInfo?.State is OrderCaptureState.Cancel)
+            LogEvent(order, "Transaction already voided");
+        else
+            order.CaptureInfo = new OrderCaptureInfo(OrderCaptureState.Cancel, "Transaction voided");
 
-            if (order.CaptureInfo?.State is OrderCaptureState.Cancel)
-                LogEvent(order, "Transaction already voided");
-            else
-                order.CaptureInfo = new OrderCaptureInfo(OrderCaptureState.Cancel, "Transaction voided");
+        order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(details.TransactionStatus);
 
-            order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(transactionDetails.TransactionStatus);
-
-            Save(order);
-            LogEvent(order, "Void synchronization completed");
-        }
-        catch (Exception ex)
-        {
-            LogError(order, ex, "Failed to synchronize void with API data: {0}", ex.Message);
-        }
+        Save(order);
+        LogEvent(order, "Void synchronization completed");
     }
 
     private static void UpdateBasicTransactionInfo(Order order, TransactionDetailsType transactionDetails)
@@ -1217,19 +1268,13 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
 
     /// <summary>
     /// Completes an order from a webhook when the customer never returned from the hosted page.
+    /// Runs inside the order lock taken by <see cref="HandleCallback"/> on a freshly read order, so the
+    /// customer's return cannot complete the same order at the same time.
     /// </summary>
     private void CompleteOrderFromWebhook(Order order, string? transactionId)
     {
         if (order.Complete)
             return;
-
-        // Another request (the customer returning from the hosted page) may have completed the order meanwhile.
-        Order? current = Ecommerce.Services.Orders.GetById(order.Id);
-        if (current?.Complete == true)
-        {
-            LogEvent(order, "Order was completed by another request; skipping completion from webhook");
-            return;
-        }
 
         LogEvent(order, "Completing order from webhook (transaction {0})", transactionId ?? order.TransactionNumber);
         MarkOrderComplete(order, transactionId ?? order.TransactionNumber);
@@ -1421,6 +1466,28 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
         => new(ApiLoginId, TransactionKey, TestMode, DebugLogging, order);
 
     private static void Save(Order order) => Ecommerce.Services.Orders.Save(order);
+
+    private static object GetOrderLock(Order order)
+        => OrderLocks[(order.AutoId & int.MaxValue) % OrderLocks.Length];
+
+    /// <summary>
+    /// Reads the order again by AutoId, which survives the cart-to-order id change on completion.
+    /// </summary>
+    private static Order ReloadOrder(Order order)
+        => order.AutoId > 0 ? Ecommerce.Services.Orders.GetByAutoId(order.AutoId) ?? order : order;
+
+    /// <summary>
+    /// Returns the completed order when this order, or its stored copy, is complete (another request
+    /// completed it meanwhile); otherwise null.
+    /// </summary>
+    private static Order? FindCompletedCopy(Order order)
+    {
+        if (order.Complete)
+            return order;
+
+        Order stored = ReloadOrder(order);
+        return stored.Complete ? stored : null;
+    }
 
     private static string FormatAmount(Order order, double amount)
         => Ecommerce.Services.Currencies.Format(order.Currency, amount);

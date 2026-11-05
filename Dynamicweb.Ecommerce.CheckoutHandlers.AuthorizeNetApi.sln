@@ -4,7 +4,7 @@ VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi", "src\Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.csproj", "{C0606D06-4528-456E-9953-15FDC5F68DA7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Tests", "tests\Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Tests.csproj", "{5E1F2C3A-7B8D-4E9F-A0B1-C2D3E4F5A6B7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Tests", "tests\Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Tests\Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Tests.csproj", "{5E1F2C3A-7B8D-4E9F-A0B1-C2D3E4F5A6B7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

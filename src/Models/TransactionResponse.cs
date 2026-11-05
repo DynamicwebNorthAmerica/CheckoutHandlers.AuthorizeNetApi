@@ -29,9 +29,6 @@ internal sealed class TransactionResponse
     [JsonPropertyName("refTransID"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? RefTransId { get; set; }
 
-    [JsonPropertyName("transHash"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string? TransHash { get; set; }
-
     [JsonPropertyName("testRequest"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? TestRequest { get; set; }
 

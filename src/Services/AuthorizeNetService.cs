@@ -16,12 +16,11 @@ namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Services;
 /// </summary>
 internal sealed class AuthorizeNetService
 {
-    private const int UnsettledTransactionPageSize = 1000;
-
     /// <summary>
-    /// How many pages of unsettled transactions a lookup by invoice number scans (newest first).
+    /// getUnsettledTransactionListRequest returns at most the 1000 most recent unsettled transactions,
+    /// so one page is all there is.
     /// </summary>
-    private const int UnsettledTransactionMaxPages = 5;
+    private const int UnsettledTransactionPageSize = 1000;
 
     private readonly AuthorizeNetHttpService _httpService;
     private readonly string _apiLoginId;
@@ -45,14 +44,13 @@ internal sealed class AuthorizeNetService
 
     /// <summary>
     /// Requests an Accept Hosted form token (getHostedPaymentPageRequest).
+    /// The card is entered by the customer here, so the transaction carries no stored-credential flag even
+    /// when the card is saved afterwards: isStoredCredentials marks payments that use already stored data.
     /// </summary>
-    public GetHostedPaymentPageResponse? GetHostedPaymentPage(Order order, double orderAmount, TransactionType transactionType, bool saveCard, HostedPaymentSettings settings)
+    public GetHostedPaymentPageResponse? GetHostedPaymentPage(Order order, double orderAmount, TransactionType transactionType, HostedPaymentSettings settings)
     {
         TransactionRequestType transactionRequest = CreateBasePaymentTransactionRequest(order, orderAmount, transactionType);
         AddCustomerData(transactionRequest, order);
-
-        if (saveCard)
-            transactionRequest.ProcessingOptions = new ProcessingOptionsType { IsStoredCredentials = true };
 
         var wrapper = new GetHostedPaymentPageRequestWrapper
         {
@@ -74,9 +72,20 @@ internal sealed class AuthorizeNetService
     public CreateTransactionResponse? ChargeCustomerProfile(Order order, double orderAmount, TransactionType transactionType, CustomerProfilePaymentType profileToCharge)
     {
         TransactionRequestType request = CreateBasePaymentTransactionRequest(order, orderAmount, transactionType);
-        request.Profile = profileToCharge;
+        PrepareCustomerProfileCharge(request, profileToCharge);
 
         return CreateTransaction(request, OrderHelper.GetRefId(order));
+    }
+
+    /// <summary>
+    /// Charges the payment profile. The customer starts this payment with a stored card, so it is flagged as a
+    /// stored-credential transaction; the profile supplies originalNetworkTransId and originalAuthAmount itself.
+    /// See https://developer.authorize.net/api/reference/features/card-on-file.html
+    /// </summary>
+    internal static void PrepareCustomerProfileCharge(TransactionRequestType request, CustomerProfilePaymentType profileToCharge)
+    {
+        request.Profile = profileToCharge;
+        request.ProcessingOptions = new ProcessingOptionsType { IsStoredCredentials = true };
     }
 
     /// <summary>
@@ -215,9 +224,10 @@ internal sealed class AuthorizeNetService
     }
 
     /// <summary>
-    /// Lists unsettled transactions, newest first (getUnsettledTransactionListRequest).
+    /// Lists the most recent unsettled transactions, newest first (getUnsettledTransactionListRequest).
+    /// The API returns at most 1000 transactions.
     /// </summary>
-    public List<TransactionSummaryType> GetUnsettledTransactions(int page = 1, int limit = UnsettledTransactionPageSize)
+    public List<TransactionSummaryType> GetUnsettledTransactions()
     {
         var wrapper = new GetUnsettledTransactionListRequestWrapper
         {
@@ -225,7 +235,7 @@ internal sealed class AuthorizeNetService
             {
                 MerchantAuthentication = GetMerchantAuthentication(),
                 Sorting = new TransactionListSorting { OrderBy = "submitTimeUTC", OrderDescending = true },
-                Paging = new TransactionListPaging { Limit = Math.Clamp(limit, 1, UnsettledTransactionPageSize), Offset = Math.Max(1, page) }
+                Paging = new TransactionListPaging { Limit = UnsettledTransactionPageSize, Offset = 1 }
             }
         };
 
@@ -235,30 +245,16 @@ internal sealed class AuthorizeNetService
     }
 
     /// <summary>
-    /// Finds the newest unsettled transaction created for an order (matched on invoiceNumber), scanning
-    /// newest-first pages until found or the list is exhausted. Used to verify a hosted-form payment when the
-    /// customer returns, since the redirect itself carries no data.
+    /// Finds the newest unsettled transaction created for an order (matched on invoiceNumber). Used to verify
+    /// a hosted-form payment when the customer returns, since the redirect itself carries no data.
     /// </summary>
     public TransactionSummaryType? FindUnsettledTransaction(string invoiceNumber)
     {
         if (string.IsNullOrWhiteSpace(invoiceNumber))
             return null;
 
-        for (int page = 1; page <= UnsettledTransactionMaxPages; page++)
-        {
-            List<TransactionSummaryType> transactions = GetUnsettledTransactions(page);
-
-            TransactionSummaryType? match = transactions
-                .FirstOrDefault(transaction => string.Equals(transaction.InvoiceNumber?.Trim(), invoiceNumber, StringComparison.OrdinalIgnoreCase));
-
-            if (match is not null)
-                return match;
-
-            if (transactions.Count < UnsettledTransactionPageSize)
-                break;
-        }
-
-        return null;
+        return GetUnsettledTransactions()
+            .FirstOrDefault(transaction => string.Equals(transaction.InvoiceNumber?.Trim(), invoiceNumber, StringComparison.OrdinalIgnoreCase));
     }
 
     #endregion

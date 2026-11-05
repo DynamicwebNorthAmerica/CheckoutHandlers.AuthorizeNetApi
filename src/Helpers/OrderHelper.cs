@@ -43,12 +43,55 @@ internal static class OrderHelper
         => Ecommerce.Services.Currencies.Round(order.Currency, order.Price.Price + order.ExternalPaymentFee);
 
     /// <summary>
+    /// Prefix of the refId built from the order AutoId. It keeps the refId apart from plain numbers such as
+    /// invoice numbers of transactions created outside Dynamicweb.
+    /// </summary>
+    public const string AutoIdRefIdPrefix = "DW-";
+
+    /// <summary>
     /// The Authorize.Net refId for an order. It comes back as merchantReferenceId in webhook notifications
-    /// and is used to find the order again. The numeric AutoId is used because Order.Id changes from the
-    /// cart id to the order id when the order completes, while AutoId never changes.
+    /// and is used to find the order again. The AutoId is used because Order.Id changes from the cart id to
+    /// the order id when the order completes, while AutoId never changes.
     /// </summary>
     public static string? GetRefId(Order order)
-        => order.AutoId > 0 ? GetRefId(order.AutoId.ToString()) : GetRefId(order.Id);
+        => order.AutoId > 0 ? GetRefId(AutoIdRefIdPrefix + order.AutoId) : GetRefId(order.Id);
+
+    /// <summary>
+    /// Reads the AutoId back from a refId built by <see cref="GetRefId(Order)"/>.
+    /// </summary>
+    public static bool TryParseAutoIdRefId(string? refId, out int autoId)
+    {
+        autoId = 0;
+        return refId is not null
+            && refId.StartsWith(AutoIdRefIdPrefix, StringComparison.Ordinal)
+            && int.TryParse(refId.AsSpan(AutoIdRefIdPrefix.Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out autoId)
+            && autoId > 0;
+    }
+
+    /// <summary>
+    /// True when an Authorize.Net transaction belongs to the order's payment: it is the payment transaction
+    /// itself (auth, capture, void) or refers to it (refund). Before the order has a transaction number, the
+    /// transaction must carry the order id as invoice number.
+    /// </summary>
+    /// <remarks>
+    /// Webhooks arrive for every transaction on the merchant account, including ones created outside this
+    /// site, so the order found from the notification is only trusted after this check.
+    /// </remarks>
+    public static bool IsTransactionForOrder(Order order, string? transId, string? refTransId, string? invoiceNumber)
+        => IsTransactionForOrder(order.TransactionNumber, order.Id, transId, refTransId, invoiceNumber);
+
+    internal static bool IsTransactionForOrder(string? orderTransactionNumber, string? orderId, string? transId, string? refTransId, string? invoiceNumber)
+    {
+        if (!string.IsNullOrWhiteSpace(orderTransactionNumber))
+        {
+            return string.Equals(transId, orderTransactionNumber, StringComparison.Ordinal)
+                || string.Equals(refTransId, orderTransactionNumber, StringComparison.Ordinal);
+        }
+
+        return !string.IsNullOrWhiteSpace(invoiceNumber)
+            && !string.IsNullOrWhiteSpace(orderId)
+            && string.Equals(invoiceNumber.Trim(), orderId, StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// Returns the reference as an Authorize.Net refId when it fits the 20 character limit, otherwise null.

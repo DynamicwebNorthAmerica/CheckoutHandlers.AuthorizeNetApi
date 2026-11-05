@@ -18,8 +18,22 @@ namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Services;
 /// </summary>
 internal sealed class AuthorizeNetHttpService
 {
+    /// <summary>
+    /// Returned by the reporting calls (getTransactionDetails, getUnsettledTransactionList) when the
+    /// Transaction Details API is not enabled for the merchant account.
+    /// </summary>
+    internal const string TransactionDetailsApiDisabledCode = "E00011";
+
+    internal const string TransactionDetailsApiDisabledHint =
+        "Enable the Transaction Details API in the Authorize.Net Merchant Interface (Account > Settings > Security Settings > Transaction Details API); the handler needs it to verify payments.";
+
     private static readonly HttpClient ProductionHttpClient = CreateHttpClient(AuthorizeNetEndpoints.GetWebhookBaseUrl(isTestMode: false));
     private static readonly HttpClient SandboxHttpClient = CreateHttpClient(AuthorizeNetEndpoints.GetWebhookBaseUrl(isTestMode: true));
+
+    /// <summary>
+    /// Replaces the pooled clients when set. Tests use it to answer requests from a stub handler.
+    /// </summary>
+    internal static HttpClient? ClientOverride { get; set; }
 
     private readonly HttpClient _httpClient;
     private readonly string _apiUrl;
@@ -29,7 +43,7 @@ internal sealed class AuthorizeNetHttpService
     {
         _apiUrl = AuthorizeNetEndpoints.GetApiEndpoint(isTestMode);
         _logger = logger;
-        _httpClient = isTestMode ? SandboxHttpClient : ProductionHttpClient;
+        _httpClient = ClientOverride ?? (isTestMode ? SandboxHttpClient : ProductionHttpClient);
     }
 
     /// <summary>
@@ -133,6 +147,9 @@ internal sealed class AuthorizeNetHttpService
         {
             messages += " Details: " + string.Join("; ", errors.Select(e => $"[{e.ErrorCode}] {e.ErrorText}"));
         }
+
+        if (errorResponse.Messages?.Message?.Any(m => m.Code == TransactionDetailsApiDisabledCode) == true)
+            messages += " " + TransactionDetailsApiDisabledHint;
 
         return messages;
     }
