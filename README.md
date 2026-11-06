@@ -16,6 +16,8 @@ Targets .NET 10 and DynamicWeb 10.30.
 | Saved cards (`ISavedCardAction`) | Stored as Authorize.Net customer payment profiles (`createCustomerProfileFromTransactionRequest`). The DynamicWeb user id is the `merchantCustomerId`. |
 | Webhooks (`ICheckoutHandlerCallback`) | Signature-verified notifications update capture, refund and void state and complete orders paid on the hosted page even when the customer never returns. |
 
+Page-based carts (Swift, Cart V2) are supported. Headless checkout through the Delivery API is not: the hosted page always returns the customer to the handler's own URL on the cart page (`GetBaseUrl`), and `CheckoutParameters.ReceiptUrl` / `CancelUrl` are ignored, as in the other Dynamicweb checkout handlers.
+
 ## Setup
 
 ### 1. Authorize.Net account

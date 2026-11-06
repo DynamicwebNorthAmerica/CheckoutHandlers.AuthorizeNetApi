@@ -170,23 +170,25 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
 
             string action = Converter.ToString(Context.Current?.Request?["action"]);
 
-            if (string.IsNullOrEmpty(action) && !string.IsNullOrEmpty(order.GatewayResult))
-            {
-                LogEvent(order, "GatewayResult found, but action is empty.");
-                return ContentOutputResult.Empty;
-            }
-
             return action switch
             {
                 ReceiptAction => HandleHostedFormReturn(order),
                 CancelAction => OrderCancelled(order),
-                _ => ContentOutputResult.Empty
+                // A blank page would strand the customer; the cart shows the receipt for a completed order
+                // and the checkout otherwise.
+                _ => UnknownAction(order, action)
             };
         }
         catch (Exception ex)
         {
             return OnError(order, "The payment could not be completed.", $"Unhandled exception in HandleRequest: {ex.Message}", ex);
         }
+    }
+
+    private OutputResult UnknownAction(Order order, string action)
+    {
+        LogEvent(order, "Request without a known action ('{0}'); passing back to the cart", action);
+        return PassToCart(FindCompletedCopy(order) ?? order);
     }
 
     private OutputResult RedirectToHostedForm(Order order)
@@ -657,9 +659,8 @@ public class AuthorizeNetCheckoutHandler : CheckoutHandler, ICancelOrder, IFullR
             if (!IsResponseSuccessful(response, order) || string.IsNullOrWhiteSpace(response.TransactionResponse?.TransId))
                 return CaptureFailed(order, GetErrorText(response) ?? "Capture failed");
 
-            // Recorded here so refunds work without the capture webhook; the webhook only adds a capture it
-            // does not see on the order yet (HandleCaptureDelta).
-            order.CaptureAmount = captureAmount;
+            // CaptureAmount is not set here: OrderService.Capture adds the captured amount to the order itself
+            // after this method returns Success, so setting it here would count the capture twice.
             order.TransactionStatus = TransactionDetailsHelper.GetTransactionStatus(TransactionStatusEnum.CapturedPendingSettlement);
             Save(order);
 
