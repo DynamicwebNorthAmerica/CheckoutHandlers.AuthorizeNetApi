@@ -1,6 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<VersionPrefix>10.23.0</VersionPrefix>
+		<VersionPrefix>10.30.0</VersionPrefix>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
 		<Title>Authorize.Net API</Title>
 		<Description>Authorize.Net API Checkout Handler</Description>
@@ -14,7 +14,7 @@
 		<Copyright>Copyright © 2026 Dynamicweb Software A/S</Copyright>
 	</PropertyGroup>
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<IncludeSymbols>true</IncludeSymbols>
 		<EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -22,17 +22,35 @@
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<Nullable>enable</Nullable>
+		<ImplicitUsings>disable</ImplicitUsings>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
 		<PackageIcon>AuthorizeNet-logo.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Dynamicweb" Version="10.23.7" />
-		<PackageReference Include="Dynamicweb.Core" Version="10.23.7" />
-		<PackageReference Include="Dynamicweb.Ecommerce" Version="10.23.7" />
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+		<None Remove="Updates\checkouthandler_cancel.html" />
+		<None Remove="Updates\checkouthandler_error.html" />
+		<None Remove="Updates\checkouthandler_pending.html" />
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Updates\checkouthandler_cancel.html" />
+		<EmbeddedResource Include="Updates\checkouthandler_error.html" />
+		<EmbeddedResource Include="Updates\checkouthandler_pending.html" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Dynamicweb" Version="10.30.4" />
+		<PackageReference Include="Dynamicweb.Core" Version="10.30.4" />
+		<PackageReference Include="Dynamicweb.Ecommerce" Version="10.30.4" />
+	</ItemGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Tests" />
 	</ItemGroup>
 	<ItemGroup>
 	  <None Update="AuthorizeNet-logo.png">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="..\README.md">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>

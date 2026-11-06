@@ -1,13 +1,12 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class Message
 {
-    [DataMember(Name = "code", EmitDefaultValue = false)]
+    [JsonPropertyName("code"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Code { get; set; }
 
-    [DataMember(Name = "text", EmitDefaultValue = false)]
+    [JsonPropertyName("text"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Text { get; set; }
 }

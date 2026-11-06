@@ -1,56 +1,55 @@
-﻿using System.Runtime.Serialization;
-using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
+﻿using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class TransactionRequestType
 {
     private double _amount;
 
-    [DataMember(Name = "transactionType")]
+    [JsonPropertyName("transactionType")]
     public TransactionTypeEnum TransactionType { get; set; }
 
-    [DataMember(Name = "amount", EmitDefaultValue = false)]
-    public double Amount 
-    { 
+    [JsonPropertyName("amount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public double Amount
+    {
         get => _amount;
         set => _amount = AmountHelper.AdjustAmount(value);
     }
 
-    [DataMember(Name = "currencyCode", EmitDefaultValue = false)]
+    [JsonPropertyName("currencyCode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CurrencyCode { get; set; }
 
-    [DataMember(Name = "payment", EmitDefaultValue = false)]
+    [JsonPropertyName("payment"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public PaymentType? Payment { get; set; }
 
-    [DataMember(Name = "profile", EmitDefaultValue = false)]
+    [JsonPropertyName("profile"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CustomerProfilePaymentType? Profile { get; set; }
 
-    [DataMember(Name = "refTransId", EmitDefaultValue = false)]
+    [JsonPropertyName("refTransId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? RefTransId { get; set; }
 
-    [DataMember(Name = "order", EmitDefaultValue = false)]
+    [JsonPropertyName("order"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public OrderType? Order { get; set; }
 
-    [DataMember(Name = "lineItems", EmitDefaultValue = false)]
+    [JsonPropertyName("lineItems"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public LineItems? LineItems { get; set; }
 
-    [DataMember(Name = "customer", EmitDefaultValue = false)]
+    [JsonPropertyName("customer"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CustomerDataType? Customer { get; set; }
 
-    [DataMember(Name = "billTo", EmitDefaultValue = false)]
+    [JsonPropertyName("billTo"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CustomerAddressType? BillTo { get; set; }
 
-    [DataMember(Name = "shipTo", EmitDefaultValue = false)]
+    [JsonPropertyName("shipTo"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public NameAndAddressType? ShipTo { get; set; }
 
-    [DataMember(Name = "customerIP", EmitDefaultValue = false)]
+    [JsonPropertyName("customerIP"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomerIp { get; set; }
 
-    [DataMember(Name = "processingOptions", EmitDefaultValue = false)]
+    [JsonPropertyName("processingOptions"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ProcessingOptionsType? ProcessingOptions { get; set; }
 
-    [DataMember(Name = "subsequentAuthInformation", EmitDefaultValue = false)]
+    [JsonPropertyName("subsequentAuthInformation"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public SubsequentAuthInformationType? SubsequentAuthInformation { get; set; }
 }

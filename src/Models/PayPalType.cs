@@ -1,25 +1,24 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class PayPalType
 {
-    [DataMember(Name = "successUrl", EmitDefaultValue = false)]
+    [JsonPropertyName("successUrl"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? SuccessUrl { get; set; }
 
-    [DataMember(Name = "cancelUrl", EmitDefaultValue = false)]
+    [JsonPropertyName("cancelUrl"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CancelUrl { get; set; }
 
-    [DataMember(Name = "paypalLc", EmitDefaultValue = false)]
+    [JsonPropertyName("paypalLc"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? PaypalLc { get; set; }
 
-    [DataMember(Name = "paypalHdrImg", EmitDefaultValue = false)]
+    [JsonPropertyName("paypalHdrImg"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? PaypalHdrImg { get; set; }
 
-    [DataMember(Name = "paypalPayflowcolor", EmitDefaultValue = false)]
+    [JsonPropertyName("paypalPayflowcolor"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? PaypalPayflowcolor { get; set; }
 
-    [DataMember(Name = "payerID", EmitDefaultValue = false)]
+    [JsonPropertyName("payerID"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? PayerID { get; set; }
 }

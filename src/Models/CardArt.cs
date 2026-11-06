@@ -1,23 +1,22 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CardArt
 {
-    [DataMember(Name = "cardBrand", EmitDefaultValue = false)]
+    [JsonPropertyName("cardBrand"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CardBrand { get; set; }
 
-    [DataMember(Name = "cardImageHeight", EmitDefaultValue = false)]
+    [JsonPropertyName("cardImageHeight"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CardImageHeight { get; set; }
 
-    [DataMember(Name = "cardImageUrl", EmitDefaultValue = false)]
+    [JsonPropertyName("cardImageUrl"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CardImageUrl { get; set; }
 
-    [DataMember(Name = "cardImageWidth", EmitDefaultValue = false)]
+    [JsonPropertyName("cardImageWidth"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CardImageWidth { get; set; }
 
-    [DataMember(Name = "cardType", EmitDefaultValue = false)]
+    [JsonPropertyName("cardType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CardType { get; set; }
 }
 

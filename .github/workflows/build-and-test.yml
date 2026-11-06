@@ -1,0 +1,33 @@
+name: Test
+
+# Packing and publishing run through the common Dynamicweb workflows (pr.yml, main.yml).
+# The common build does not run tests, so this workflow only runs the unit tests.
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test
+        run: dotnet test tests/Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Tests/Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Tests.csproj --configuration Release --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/test-results.trx'

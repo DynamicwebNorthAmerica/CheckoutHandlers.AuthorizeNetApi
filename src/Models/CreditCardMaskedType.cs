@@ -1,25 +1,24 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CreditCardMaskedType
 {
-    [DataMember(Name = "cardNumber", EmitDefaultValue = false)]
+    [JsonPropertyName("cardNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CardNumber { get; set; }
 
-    [DataMember(Name = "expirationDate", EmitDefaultValue = false)]
+    [JsonPropertyName("expirationDate"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? ExpirationDate { get; set; }
 
-    [DataMember(Name = "cardType", EmitDefaultValue = false)]
+    [JsonPropertyName("cardType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CardTypeEnum? CardType { get; set; }
 
-    [DataMember(Name = "cardArt", EmitDefaultValue = false)]
+    [JsonPropertyName("cardArt"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CardArt? CardArt { get; set; }
 
-    [DataMember(Name = "issuerNumber", EmitDefaultValue = false)]
+    [JsonPropertyName("issuerNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? IssuerNumber { get; set; }
 
-    [DataMember(Name = "isPaymentToken", EmitDefaultValue = false)]
+    [JsonPropertyName("isPaymentToken"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsPaymentToken { get; set; }
 }

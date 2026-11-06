@@ -1,22 +1,21 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class ReturnedItem
 {
-    [DataMember(Name = "id")]
+    [JsonPropertyName("id")]
     public string Id { get; set; } = "";
 
-    [DataMember(Name = "dateUTC", EmitDefaultValue = false)]
+    [JsonPropertyName("dateUTC"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DateUTC { get; set; }
 
-    [DataMember(Name = "dateLocal", EmitDefaultValue = false)]
+    [JsonPropertyName("dateLocal"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DateLocal { get; set; }
 
-    [DataMember(Name = "code", EmitDefaultValue = false)]
+    [JsonPropertyName("code"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Code { get; set; }
 
-    [DataMember(Name = "description", EmitDefaultValue = false)]
+    [JsonPropertyName("description"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Description { get; set; }
 }

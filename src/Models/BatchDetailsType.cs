@@ -1,33 +1,32 @@
 ﻿using System.Collections.Generic;
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class BatchDetailsType
 {
-    [DataMember(Name = "batchId", EmitDefaultValue = false)]
+    [JsonPropertyName("batchId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? BatchId { get; set; }
 
-    [DataMember(Name = "settlementTimeUTC", EmitDefaultValue = false)]
+    [JsonPropertyName("settlementTimeUTC"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? SettlementTimeUTC { get; set; }
 
-    [DataMember(Name = "settlementTimeLocal", EmitDefaultValue = false)]
+    [JsonPropertyName("settlementTimeLocal"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? SettlementTimeLocal { get; set; }
 
-    [DataMember(Name = "settlementState", EmitDefaultValue = false)]
+    [JsonPropertyName("settlementState"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public SettlementStateEnum? SettlementState { get; set; }
 
-    [DataMember(Name = "paymentMethod", EmitDefaultValue = false)]
+    [JsonPropertyName("paymentMethod"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public PaymentMethodEnum? PaymentMethod { get; set; }
 
-    [DataMember(Name = "marketType", EmitDefaultValue = false)]
+    [JsonPropertyName("marketType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? MarketType { get; set; }
 
-    [DataMember(Name = "product", EmitDefaultValue = false)]
+    [JsonPropertyName("product"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Product { get; set; }
 
-    [DataMember(Name = "statistics", EmitDefaultValue = false)]
+    [JsonPropertyName("statistics"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IEnumerable<BatchStatisticType>? Statistics { get; set; }
 }
 

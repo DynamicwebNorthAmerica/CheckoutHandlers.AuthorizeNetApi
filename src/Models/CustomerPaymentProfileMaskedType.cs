@@ -1,41 +1,40 @@
 ﻿using System.Collections.Generic;
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CustomerPaymentProfileMaskedType
 {
-    [DataMember(Name = "customerType", EmitDefaultValue = false)]
+    [JsonPropertyName("customerType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CustomerTypeEnum? CustomerType { get; set; }
 
-    [DataMember(Name = "billTo", EmitDefaultValue = false)]
+    [JsonPropertyName("billTo"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CustomerAddressType? BillTo { get; set; }
 
-    [DataMember(Name = "customerProfileId", EmitDefaultValue = false)]
+    [JsonPropertyName("customerProfileId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomerProfileId { get; set; }
 
-    [DataMember(Name = "customerPaymentProfileId", EmitDefaultValue = false)]
+    [JsonPropertyName("customerPaymentProfileId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomerPaymentProfileId { get; set; }
 
-    [DataMember(Name = "defaultPaymentProfile", EmitDefaultValue = false)]
+    [JsonPropertyName("defaultPaymentProfile"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool DefaultPaymentProfile { get; set; }
 
-    [DataMember(Name = "payment", EmitDefaultValue = false)]
+    [JsonPropertyName("payment"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public PaymentMaskedType? Payment { get; set; }
 
-    [DataMember(Name = "driversLicense", EmitDefaultValue = false)]
+    [JsonPropertyName("driversLicense"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public DriversLicenseMaskedType? DriversLicense { get; set; }
 
-    [DataMember(Name = "taxId", EmitDefaultValue = false)]
+    [JsonPropertyName("taxId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? TaxId { get; set; }
 
-    [DataMember(Name = "subscriptionIds", EmitDefaultValue = false)]
+    [JsonPropertyName("subscriptionIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IEnumerable<string>? SubscriptionIds { get; set; }
 
-    [DataMember(Name = "originalNetworkTransId", EmitDefaultValue = false)]
+    [JsonPropertyName("originalNetworkTransId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? OriginalNetworkTransId { get; set; }
 
-    [DataMember(Name = "originalAuthAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("originalAuthAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double OriginalAuthAmount { get; set; }
 }

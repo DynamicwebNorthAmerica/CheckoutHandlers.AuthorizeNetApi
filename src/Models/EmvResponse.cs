@@ -1,13 +1,12 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class EmvResponse
 {
-    [DataMember(Name = "tlvData", EmitDefaultValue = false)]
+    [JsonPropertyName("tlvData"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? TlvData { get; set; }
 
-    [DataMember(Name = "tags", EmitDefaultValue = false)]
+    [JsonPropertyName("tags"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public EmvTag? Tags { get; set; }
 }

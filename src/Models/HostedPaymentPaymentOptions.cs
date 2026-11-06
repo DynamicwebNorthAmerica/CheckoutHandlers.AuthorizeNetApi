@@ -1,10 +1,9 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class HostedPaymentPaymentOptions
 {
-    [DataMember(Name = "showBankAccount", EmitDefaultValue = false)]
+    [JsonPropertyName("showBankAccount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool ShowBankAccount { get; set; }
 }

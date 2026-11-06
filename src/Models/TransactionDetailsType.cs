@@ -1,162 +1,161 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class TransactionDetailsType
 {
-    [DataMember(Name = "transId")]
+    [JsonPropertyName("transId")]
     public string TransId { get; set; } = "";
 
-    [DataMember(Name = "refTransId", EmitDefaultValue = false)]
+    [JsonPropertyName("refTransId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? RefTransId { get; set; }
 
-    [DataMember(Name = "splitTenderId", EmitDefaultValue = false)]
+    [JsonPropertyName("splitTenderId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? SplitTenderId { get; set; }
 
-    [DataMember(Name = "submitTimeUTC", EmitDefaultValue = false)]
+    [JsonPropertyName("submitTimeUTC"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? SubmitTimeUTC { get; set; }
 
-    [DataMember(Name = "submitTimeLocal", EmitDefaultValue = false)]
+    [JsonPropertyName("submitTimeLocal"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? SubmitTimeLocal { get; set; }
 
-    [DataMember(Name = "transactionType", EmitDefaultValue = false)]
+    [JsonPropertyName("transactionType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransactionTypeEnum? TransactionType { get; set; }
 
-    [DataMember(Name = "transactionStatus", EmitDefaultValue = false)]
+    [JsonPropertyName("transactionStatus"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransactionStatusEnum? TransactionStatus { get; set; }
 
-    [DataMember(Name = "responseCode", EmitDefaultValue = false)]
+    [JsonPropertyName("responseCode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ResponseCode { get; set; }
 
-    [DataMember(Name = "responseReasonCode", EmitDefaultValue = false)]
+    [JsonPropertyName("responseReasonCode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ResponseReasonCode { get; set; }
 
-    [DataMember(Name = "subscription", EmitDefaultValue = false)]
+    [JsonPropertyName("subscription"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public SubscriptionPaymentType? Subscription { get; set; }
 
-    [DataMember(Name = "responseReasonDescription", EmitDefaultValue = false)]
+    [JsonPropertyName("responseReasonDescription"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? ResponseReasonDescription { get; set; }
 
-    [DataMember(Name = "authCode", EmitDefaultValue = false)]
+    [JsonPropertyName("authCode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AuthCode { get; set; }
 
-    [DataMember(Name = "AVSResponse", EmitDefaultValue = false)]
+    [JsonPropertyName("AVSResponse"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AvsResponse { get; set; }
 
-    [DataMember(Name = "cardCodeResponse", EmitDefaultValue = false)]
+    [JsonPropertyName("cardCodeResponse"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CardCodeResponse { get; set; }
 
-    [DataMember(Name = "CAVVResponse", EmitDefaultValue = false)]
+    [JsonPropertyName("CAVVResponse"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CavvResponse { get; set; }
 
-    [DataMember(Name = "FDSFilterAction", EmitDefaultValue = false)]
+    [JsonPropertyName("FDSFilterAction"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public FdsFilterActionEnum? FdsFilterAction { get; set; }
 
-    [DataMember(Name = "FDSFilters", EmitDefaultValue = false)]
+    [JsonPropertyName("FDSFilters"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IEnumerable<FDSFilter>? FdsFilters { get; set; }
 
-    [DataMember(Name = "batch", EmitDefaultValue = false)]
+    [JsonPropertyName("batch"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public BatchDetailsType? Batch { get; set; }
 
-    [DataMember(Name = "order", EmitDefaultValue = false)]
+    [JsonPropertyName("order"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public OrderExType? Order { get; set; }
 
-    [DataMember(Name = "requestedAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("requestedAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double RequestedAmount { get; set; }
 
-    [DataMember(Name = "authAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("authAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double AuthAmount { get; set; }
 
-    [DataMember(Name = "settleAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("settleAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double SettleAmount { get; set; }
 
-    [DataMember(Name = "tax", EmitDefaultValue = false)]
+    [JsonPropertyName("tax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ExtendedAmountType? Tax { get; set; }
 
-    [DataMember(Name = "shipping", EmitDefaultValue = false)]
+    [JsonPropertyName("shipping"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ExtendedAmountType? Shipping { get; set; }
 
-    [DataMember(Name = "duty", EmitDefaultValue = false)]
+    [JsonPropertyName("duty"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ExtendedAmountType? Duty { get; set; }
 
-    [DataMember(Name = "lineItems", EmitDefaultValue = false)]
+    [JsonPropertyName("lineItems"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IEnumerable<LineItem>? LineItems { get; set; }
 
-    [DataMember(Name = "prepaidBalanceRemaining", EmitDefaultValue = false)]
+    [JsonPropertyName("prepaidBalanceRemaining"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double PrepaidBalanceRemaining { get; set; }
 
-    [DataMember(Name = "taxExempt", EmitDefaultValue = false)]
+    [JsonPropertyName("taxExempt"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool TaxExempt { get; set; }
 
-    [DataMember(Name = "payment", EmitDefaultValue = false)]
+    [JsonPropertyName("payment"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public PaymentMaskedType? Payment { get; set; }
 
-    [DataMember(Name = "customer", EmitDefaultValue = false)]
+    [JsonPropertyName("customer"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CustomerDataType? Customer { get; set; }
 
-    [DataMember(Name = "billTo", EmitDefaultValue = false)]
+    [JsonPropertyName("billTo"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CustomerAddressType? BillTo { get; set; }
 
-    [DataMember(Name = "shipTo", EmitDefaultValue = false)]
+    [JsonPropertyName("shipTo"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public NameAndAddressType? ShipTo { get; set; }
 
-    [DataMember(Name = "recurringBilling", EmitDefaultValue = false)]
+    [JsonPropertyName("recurringBilling"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool RecurringBilling { get; set; }
 
-    [DataMember(Name = "customerIP", EmitDefaultValue = false)]
+    [JsonPropertyName("customerIP"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomerIp { get; set; }
 
-    [DataMember(Name = "product", EmitDefaultValue = false)]
+    [JsonPropertyName("product"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Product { get; set; }
 
-    [DataMember(Name = "entryMode", EmitDefaultValue = false)]
+    [JsonPropertyName("entryMode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? EntryMode { get; set; }
 
-    [DataMember(Name = "marketType", EmitDefaultValue = false)]
+    [JsonPropertyName("marketType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? MarketType { get; set; }
 
-    [DataMember(Name = "mobileDeviceId", EmitDefaultValue = false)]
+    [JsonPropertyName("mobileDeviceId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? MobileDeviceId { get; set; }
 
-    [DataMember(Name = "customerSignature", EmitDefaultValue = false)]
+    [JsonPropertyName("customerSignature"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomerSignature { get; set; }
 
-    [DataMember(Name = "returnedItems", EmitDefaultValue = false)]
+    [JsonPropertyName("returnedItems"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IEnumerable<ReturnedItem>? ReturnedItems { get; set; }
 
-    [DataMember(Name = "solution", EmitDefaultValue = false)]
+    [JsonPropertyName("solution"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public SolutionType? Solution { get; set; }
 
-    [DataMember(Name = "profile", EmitDefaultValue = false)]
+    [JsonPropertyName("profile"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CustomerProfileIdType? Profile { get; set; }
 
-    [DataMember(Name = "surcharge", EmitDefaultValue = false)]
+    [JsonPropertyName("surcharge"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ExtendedAmountType? Surcharge { get; set; }
 
-    [DataMember(Name = "employeeId", EmitDefaultValue = false)]
+    [JsonPropertyName("employeeId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? EmployeeId { get; set; }
 
-    [DataMember(Name = "tip", EmitDefaultValue = false)]
+    [JsonPropertyName("tip"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ExtendedAmountType? Tip { get; set; }
 
-    [DataMember(Name = "otherTax", EmitDefaultValue = false)]
+    [JsonPropertyName("otherTax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public OtherTaxType? OtherTax { get; set; }
 
-    [DataMember(Name = "shipFrom", EmitDefaultValue = false)]
+    [JsonPropertyName("shipFrom"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public NameAndAddressType? ShipFrom { get; set; }
 
-    [DataMember(Name = "networkTransId", EmitDefaultValue = false)]
+    [JsonPropertyName("networkTransId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? NetworkTransId { get; set; }
 
-    [DataMember(Name = "originalNetworkTransId", EmitDefaultValue = false)]
+    [JsonPropertyName("originalNetworkTransId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? OriginalNetworkTransId { get; set; }
 
-    [DataMember(Name = "originalAuthAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("originalAuthAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double OriginalAuthAmount { get; set; }
 
-    [DataMember(Name = "authorizationIndicator", EmitDefaultValue = false)]
+    [JsonPropertyName("authorizationIndicator"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AuthorizationIndicator { get; set; }
 }

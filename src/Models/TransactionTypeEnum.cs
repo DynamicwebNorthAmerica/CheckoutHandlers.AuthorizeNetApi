@@ -5,9 +5,13 @@ using System.Text.Json.Serialization;
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
 [JsonConverter(typeof(DataContractEnumConverter<TransactionTypeEnum>))]
-[DataContract]
 internal enum TransactionTypeEnum
 {
+    /// <summary>
+    /// A value this handler does not know. Set by the JSON converter when Authorize.Net returns a new value.
+    /// </summary>
+    Unknown = 0,
+
     [EnumMember(Value = "authOnlyTransaction")]
     AuthOnlyTransaction,
 

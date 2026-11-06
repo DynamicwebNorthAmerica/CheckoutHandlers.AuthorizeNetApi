@@ -1,19 +1,18 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CreateCustomerProfileFromTransactionRequest
 {
-    [DataMember(Name = "merchantAuthentication")]
+    [JsonPropertyName("merchantAuthentication")]
     public MerchantAuthenticationType MerchantAuthentication { get; set; } = new();
 
-    [DataMember(Name = "refId", EmitDefaultValue = false)]
+    [JsonPropertyName("refId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? RefId { get; set; }
 
-    [DataMember(Name = "transId")]
+    [JsonPropertyName("transId")]
     public string TransId { get; set; } = "";
 
-    [DataMember(Name = "customerProfileId", EmitDefaultValue = false)]
+    [JsonPropertyName("customerProfileId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomerProfileId { get; set; }
 }

@@ -1,16 +1,15 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class DriversLicenseMaskedType
 {
-    [DataMember(Name = "number", EmitDefaultValue = false)]
+    [JsonPropertyName("number"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Number { get; set; }
 
-    [DataMember(Name = "state", EmitDefaultValue = false)]
+    [JsonPropertyName("state"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? State { get; set; }
 
-    [DataMember(Name = "dateOfBirth", EmitDefaultValue = false)]
+    [JsonPropertyName("dateOfBirth"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DateOfBirth { get; set; }
 }

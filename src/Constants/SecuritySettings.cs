@@ -8,17 +8,23 @@ internal static class SecuritySettings
     internal const string CardNumberMask = "XXXX-XXXX-XXXX-";
 
     /// <summary>
-    /// Represents the mask value used to obscure credit card expiration dates.
+    /// Expiration date value Authorize.Net accepts for refunds against a stored transaction.
     /// </summary>
     internal const string CreditCardExpirationMask = "XXXX";
 
     /// <summary>
-    /// Mask for hiding API keys in logs
+    /// Replacement for secrets in logs
     /// </summary>
-    internal const string ApiKeyMask = "***HIDDEN***";
+    internal const string SecretMask = "***HIDDEN***";
 
     /// <summary>
-    /// Placeholder for saved card name
+    /// Prefix stored in Order.GatewayPaymentStatus while a hosted-form payment waits for the
+    /// transaction data needed to save the card.
     /// </summary>
     internal const string SavedCardNamePlaceholder = "NeedToSaveCardWithName:";
+
+    /// <summary>
+    /// Maximum length Authorize.Net allows for refId (merchant reference id).
+    /// </summary>
+    internal const int RefIdMaxLength = 20;
 }

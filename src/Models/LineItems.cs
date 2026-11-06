@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class LineItems
 {
-    [DataMember(Name = "lineItem", EmitDefaultValue = false)]
+    [JsonPropertyName("lineItem"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IEnumerable<LineItem>? LineItem { get; set; }
 }

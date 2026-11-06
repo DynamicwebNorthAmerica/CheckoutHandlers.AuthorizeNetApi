@@ -1,16 +1,15 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CustomerProfileIdType
 {
-    [DataMember(Name = "customerProfileId", EmitDefaultValue = false)]
+    [JsonPropertyName("customerProfileId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomerProfileId { get; set; }
 
-    [DataMember(Name = "customerPaymentProfileId", EmitDefaultValue = false)]
+    [JsonPropertyName("customerPaymentProfileId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomerPaymentProfileId { get; set; }
 
-    [DataMember(Name = "customerAddressId", EmitDefaultValue = false)]
+    [JsonPropertyName("customerAddressId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? CustomerAddressId { get; set; }
 }

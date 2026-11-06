@@ -1,10 +1,9 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class CreateCustomerProfileRequestWrapper
 {
-    [DataMember(Name = "createCustomerProfileRequest")]
+    [JsonPropertyName("createCustomerProfileRequest")]
     public CreateCustomerProfileRequest CreateCustomerProfileRequest { get; set; } = new();
 }

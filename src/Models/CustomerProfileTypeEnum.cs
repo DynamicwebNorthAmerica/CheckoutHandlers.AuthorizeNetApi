@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
 [JsonConverter(typeof(DataContractEnumConverter<CustomerProfileTypeEnum>))]
-[DataContract]
 internal enum CustomerProfileTypeEnum
 {
     [EnumMember(Value = "regular")]

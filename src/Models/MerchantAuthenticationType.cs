@@ -1,13 +1,12 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class MerchantAuthenticationType
 {
-    [DataMember(Name = "name")]
+    [JsonPropertyName("name")]
     public string Name { get; set; } = "";
 
-    [DataMember(Name = "transactionKey")]
+    [JsonPropertyName("transactionKey")]
     public string TransactionKey { get; set; } = "";
 }

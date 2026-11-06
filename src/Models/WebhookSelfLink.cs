@@ -1,16 +1,15 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
 /// <summary>
 /// Self link in webhook response
 /// </summary>
-[DataContract]
 internal sealed class WebhookSelfLink
 {
     /// <summary>
     /// HREF to the webhook resource
     /// </summary>
-    [DataMember(Name = "href", EmitDefaultValue = false)]
+    [JsonPropertyName("href"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Href { get; set; }
 }

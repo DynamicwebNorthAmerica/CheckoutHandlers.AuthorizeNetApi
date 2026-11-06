@@ -14,7 +14,7 @@ internal sealed class WebhookRegistrationResult
     /// Reason for the registration decision
     /// </summary>
     public string Reason { get; }
-    
+
     public WebhookRegistrationResult(bool requiresRegistration, string reason)
     {
         RequiresRegistration = requiresRegistration;

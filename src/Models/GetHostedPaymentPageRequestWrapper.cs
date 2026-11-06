@@ -1,10 +1,9 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
 internal sealed class GetHostedPaymentPageRequestWrapper
 {
-    [DataMember(Name = "getHostedPaymentPageRequest")]
+    [JsonPropertyName("getHostedPaymentPageRequest")]
     public GetHostedPaymentPageRequest GetHostedPaymentPageRequest { get; set; } = new();
 }

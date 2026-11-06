@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
 [JsonConverter(typeof(DataContractEnumConverter<EcheckTypeEnum>))]
-[DataContract]
 internal enum EcheckTypeEnum
 {
     [EnumMember(Value = "PPD")]

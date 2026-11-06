@@ -1,38 +1,53 @@
-﻿using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
-using System.Runtime.Serialization;
+using Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Helpers;
+using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
-[DataContract]
+/// <summary>
+/// The "payload" object of a payment webhook notification.
+/// See: https://developer.authorize.net/api/reference/features/webhooks.html
+/// </summary>
 internal sealed class NotificationPayload
 {
-    [DataMember(Name = "id")]
+    /// <summary>
+    /// Transaction id (transId) the event is about.
+    /// </summary>
+    [JsonPropertyName("id")]
     public string Id { get; set; } = "";
 
-    [DataMember(Name = "responseCode", EmitDefaultValue = false)]
+    [JsonPropertyName("responseCode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ResponseCode { get; set; }
 
-    [DataMember(Name = "authCode", EmitDefaultValue = false)]
+    [JsonPropertyName("authCode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AuthCode { get; set; }
 
-    [DataMember(Name = "avsResponse", EmitDefaultValue = false)]
+    [JsonPropertyName("avsResponse"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AvsResponse { get; set; }
 
     private double _amount;
 
-    [DataMember(Name = "authAmount", EmitDefaultValue = false)]
+    [JsonPropertyName("authAmount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double Amount
     {
         get => _amount;
         set => _amount = AmountHelper.AdjustAmount(value);
     }
 
-    [DataMember(Name = "invoiceNumber", EmitDefaultValue = false)]
-    public string? OrderId { get; set; }
+    /// <summary>
+    /// The refId sent with the API request that created the transaction.
+    /// </summary>
+    [JsonPropertyName("merchantReferenceId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public string? MerchantReferenceId { get; set; }
 
-    [DataMember(Name = "entityName", EmitDefaultValue = false)]
+    /// <summary>
+    /// order.invoiceNumber of the transaction, when Authorize.Net includes it.
+    /// </summary>
+    [JsonPropertyName("invoiceNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public string? InvoiceNumber { get; set; }
+
+    [JsonPropertyName("entityName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Name { get; set; }
 
-    [DataMember(Name = "eventType", EmitDefaultValue = false)]
+    [JsonPropertyName("eventType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? EventType { get; set; }
 }

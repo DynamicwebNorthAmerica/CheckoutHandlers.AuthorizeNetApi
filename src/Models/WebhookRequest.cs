@@ -1,34 +1,33 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Dynamicweb.Ecommerce.CheckoutHandlers.AuthorizeNetApi.Models;
 
 /// <summary>
 /// Represents a webhook request for Authorize.Net Webhooks API
 /// </summary>
-[DataContract]
 internal sealed class WebhookRequest
 {
     /// <summary>
     /// Name of the webhook (optional)
     /// </summary>
-    [DataMember(Name = "name", EmitDefaultValue = false)]
+    [JsonPropertyName("name"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Name { get; set; }
 
     /// <summary>
     /// URL to receive webhook notifications
     /// </summary>
-    [DataMember(Name = "url", EmitDefaultValue = false)]
+    [JsonPropertyName("url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Url { get; set; }
 
     /// <summary>
     /// Array of event types to subscribe to
     /// </summary>
-    [DataMember(Name = "eventTypes", EmitDefaultValue = false)]
+    [JsonPropertyName("eventTypes"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string[]? EventTypes { get; set; }
 
     /// <summary>
     /// Status of the webhook (active/inactive) - optional
     /// </summary>
-    [DataMember(Name = "status", EmitDefaultValue = false)]
+    [JsonPropertyName("status"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Status { get; set; }
 }
